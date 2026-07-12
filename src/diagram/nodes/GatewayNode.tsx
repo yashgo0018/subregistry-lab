@@ -23,7 +23,8 @@ function GatewayNode({ data, selected }: NodeProps<GatewayNodeType>) {
         className="absolute w-20 h-20 border-2 border-[var(--diagram-ink)] bg-[var(--diagram-node-bg)] rotate-45"
         style={{ top: "50%", left: "50%", marginTop: -40, marginLeft: -40 }}
       />
-      <div className="relative z-10 -rotate-45 text-center px-1 text-[var(--diagram-font-sub)] font-semibold leading-tight text-[var(--diagram-ink)]">
+      {/* The diamond behind is a rotated sibling; the label itself must stay unrotated. */}
+      <div className="relative z-10 text-center px-1 text-[var(--diagram-font-sub)] font-semibold leading-tight text-[var(--diagram-ink)]">
         <div>{data.label}</div>
         {data.id != null && data.id !== "" && (
           <div className="opacity-80 mt-0.5">{data.id}</div>

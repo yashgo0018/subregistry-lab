@@ -32,8 +32,29 @@ describe("toDiagram", () => {
     const perma = d.nodes.find((n) => n.id === "sub-perma");
     expect((perma?.data as { label: string }).label).toContain("∞");
 
-    // each subname resolves through the resolver
-    expect(d.edges.filter((e) => e.id.endsWith("-resolver"))).toHaveLength(2);
+    // records live on the resolver: one registry->resolver edge
+    const recordsEdge = d.edges.find((e) => e.id === "e-registry-resolver");
+    expect(recordsEdge?.label).toBe("records");
+  });
+
+  it("placeholders render as-is; real addresses are shortened", () => {
+    const d = toDiagram({
+      parentName: "nick.eth",
+      userRegistry: "new",
+      registrar: "new",
+      registrarRoles: ROLE_REGISTRAR,
+    });
+    const reg = d.nodes.find((n) => n.id === "user-registry");
+    expect((reg?.data as { subtitle: string }).subtitle).toBe("new");
+    const registrar = d.nodes.find((n) => n.id === "registrar");
+    expect((registrar?.data as { id: string }).id).toBe("new");
+
+    const real = toDiagram({
+      parentName: "nick.eth",
+      userRegistry: "0x2222222222222222222222222222222222222222",
+    });
+    const regReal = real.nodes.find((n) => n.id === "user-registry");
+    expect((regReal?.data as { subtitle: string }).subtitle).toBe("0x2222…2222");
   });
 
   it("no registrar node when absent, locked flag changes registry label", () => {

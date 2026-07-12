@@ -24,6 +24,7 @@ export function ConfigDiagram({
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{ padding: 0.15 }}
         className="diagram-flow"
         nodesDraggable={false}
         nodesConnectable={false}
@@ -57,6 +58,7 @@ export function ConfigDiagram({
           style={{ backgroundColor: "var(--diagram-paper)" }}
         />
         <Controls
+          position="bottom-right"
           className="!border-[var(--diagram-ink)] !bg-[var(--diagram-node-bg)] !fill-[var(--diagram-ink)]"
           showInteractive={false}
         />

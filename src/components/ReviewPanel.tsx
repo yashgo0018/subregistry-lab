@@ -58,12 +58,10 @@ export function ReviewPanel({ onComplete }: { onComplete: () => void }) {
     return toDiagram({
       parentName: `${session.parentLabel}.eth`,
       parentOwner: address,
-      userRegistry: session.addresses.userRegistry ?? "0x…new",
-      registrar: preset.registrar ? (session.addresses.registrar ?? "0x…new") : undefined,
+      userRegistry: session.addresses.userRegistry ?? "new",
+      registrar: preset.registrar ? (session.addresses.registrar ?? "new") : undefined,
       registrarRoles: preset.registrar?.grantBitmap,
-      resolver: session.deployResolver
-        ? (session.addresses.resolver ?? "0x…new")
-        : undefined,
+      resolver: session.deployResolver ? (session.addresses.resolver ?? "new") : undefined,
     });
   }, [session, preset, address]);
 

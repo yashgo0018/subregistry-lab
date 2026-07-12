@@ -10,6 +10,7 @@ import { decomposeBitmap } from "./roles";
 export type SetupView = {
   parentName: string; // e.g. "nick.eth"
   parentOwner?: string;
+  /** Real address, or a short placeholder like "new" for planned contracts. */
   userRegistry?: string;
   registrar?: string;
   resolver?: string;
@@ -20,13 +21,20 @@ export type SetupView = {
   subnames?: { label: string; neverExpires?: boolean }[];
 };
 
-function shortAddr(addr?: string): string {
-  if (!addr) return "";
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
+/** Real addresses render shortened; anything else (e.g. "new") renders as-is. */
+function displayAddr(value?: string): string {
+  if (!value) return "";
+  if (/^0x[0-9a-fA-F]{40}$/.test(value)) {
+    return `${value.slice(0, 6)}…${value.slice(-4)}`;
+  }
+  return value;
 }
 
-const COL = { left: 0, mid: 320, right: 640 };
-const ROW = 130;
+// Deterministic grid: generous spacing so ovals/diamonds and edge labels
+// never collide at default zoom.
+const COL = { left: 0, mid: 400, right: 780 };
+const ROW = { top: 0, main: 190, subStart: 360 };
+const SUB_STEP = 100;
 
 export function toDiagram(setup: SetupView): DiagramState {
   const nodes: DiagramNode[] = [];
@@ -36,7 +44,7 @@ export function toDiagram(setup: SetupView): DiagramState {
   nodes.push({
     id: "eth-registry",
     type: "root",
-    position: { x: COL.left, y: 0 },
+    position: { x: COL.left, y: ROW.top },
     data: { label: ".eth registry", variant: "blue" },
   });
 
@@ -44,7 +52,7 @@ export function toDiagram(setup: SetupView): DiagramState {
   nodes.push({
     id: "parent",
     type: "action",
-    position: { x: COL.left, y: ROW },
+    position: { x: COL.left, y: ROW.main },
     data: { label: setup.parentName, variant: "blue" },
   });
   edges.push({
@@ -57,10 +65,10 @@ export function toDiagram(setup: SetupView): DiagramState {
     nodes.push({
       id: "user-registry",
       type: "registry",
-      position: { x: COL.mid, y: ROW },
+      position: { x: COL.mid, y: ROW.main },
       data: {
         label: setup.locked ? "SUBNAME REGISTRY (LOCKED)" : "SUBNAME REGISTRY",
-        subtitle: shortAddr(setup.userRegistry),
+        subtitle: displayAddr(setup.userRegistry),
       },
     });
     edges.push({
@@ -81,8 +89,8 @@ export function toDiagram(setup: SetupView): DiagramState {
     nodes.push({
       id: "registrar",
       type: "gateway",
-      position: { x: COL.mid, y: 0 },
-      data: { label: "REGISTRAR", id: shortAddr(setup.registrar) },
+      position: { x: COL.mid + 60, y: ROW.top },
+      data: { label: "REGISTRAR", id: displayAddr(setup.registrar) },
     });
     edges.push({
       id: "e-registrar-registry",
@@ -96,9 +104,22 @@ export function toDiagram(setup: SetupView): DiagramState {
     nodes.push({
       id: "resolver",
       type: "resolver",
-      position: { x: COL.right, y: 0 },
-      data: { label: "Resolver", owner: shortAddr(setup.parentOwner) },
+      position: { x: COL.right, y: ROW.main },
+      data: {
+        label: "Resolver",
+        owner: displayAddr(setup.parentOwner),
+        addr: displayAddr(setup.resolver),
+      },
     });
+    if (setup.userRegistry) {
+      // Subnames in the registry keep their records here.
+      edges.push({
+        id: "e-registry-resolver",
+        source: "user-registry",
+        target: "resolver",
+        label: "records",
+      });
+    }
   }
 
   (setup.subnames ?? []).forEach((sub, i) => {
@@ -106,7 +127,7 @@ export function toDiagram(setup: SetupView): DiagramState {
     nodes.push({
       id,
       type: "action",
-      position: { x: COL.mid + 160, y: ROW * (2 + i) },
+      position: { x: COL.mid + 30, y: ROW.subStart + SUB_STEP * i },
       data: {
         label: `${sub.label}.${setup.parentName}${sub.neverExpires ? " ∞" : ""}`,
         variant: "blue",
@@ -117,14 +138,6 @@ export function toDiagram(setup: SetupView): DiagramState {
       source: "user-registry",
       target: id,
     });
-    if (setup.resolver) {
-      edges.push({
-        id: `e-${id}-resolver`,
-        source: id,
-        target: "resolver",
-        label: "resolver",
-      });
-    }
   });
 
   return { nodes, edges };
