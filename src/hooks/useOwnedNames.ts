@@ -192,39 +192,38 @@ export function useOwnedNames(wallet?: Address): OwnedNamesResult {
         }
 
         // Confirm current ownership + expiry on-chain for each candidate.
+        // (getState carries status/expiry/latestOwner in one call; the
+        // deployed registries have no getOwner view.)
         const candidates = cacheCandidates(cache);
         const now = BigInt(Math.floor(Date.now() / 1000));
         const confirmed: OwnedName[] = [];
         for (const candidate of candidates) {
-          const [owner, expiry] = await Promise.all([
-            client.readContract({
-              address: deployments.ETHRegistry,
-              abi: registryAbi as Abi,
-              functionName: "getOwner",
-              args: [labelhashId(candidate.label)],
-            }) as Promise<Address>,
-            client.readContract({
-              address: deployments.ETHRegistry,
-              abi: registryAbi as Abi,
-              functionName: "getExpiry",
-              args: [labelhashId(candidate.label)],
-            }) as Promise<bigint>,
-          ]);
-          const owned = owner.toLowerCase() === wallet.toLowerCase();
-          const expired = expiry <= now;
-          if (owned) {
+          const state = (await client.readContract({
+            address: deployments.ETHRegistry,
+            abi: registryAbi as Abi,
+            functionName: "getState",
+            args: [labelhashId(candidate.label)],
+          })) as { status: number; expiry: bigint; latestOwner: Address };
+          const isLatestOwner =
+            state.latestOwner.toLowerCase() === wallet.toLowerCase();
+          if (!isLatestOwner) continue;
+          if (state.status === 2) {
             confirmed.push({
               label: candidate.label,
               name: `${candidate.label}.eth`,
-              expiry,
+              expiry: state.expiry,
               status: "active",
             });
-          } else if (expired && expiry > 0n && expiry + GRACE_SECONDS > now) {
-            // getOwner masks expired names; still show grace-period names
+          } else if (
+            state.expiry > 0n &&
+            state.expiry <= now &&
+            state.expiry + GRACE_SECONDS > now
+          ) {
+            // expired but within the registrar grace window: still theirs to renew
             confirmed.push({
               label: candidate.label,
               name: `${candidate.label}.eth`,
-              expiry,
+              expiry: state.expiry,
               status: "grace",
             });
           }

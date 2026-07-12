@@ -33,15 +33,11 @@ export function useNameStatus(parentLabel?: string, account?: Address): NameStat
     contracts: enabled
       ? [
           {
+            // status/expiry/latestOwner in one call (deployed registries
+            // have no getOwner view)
             address: deployments.ETHRegistry,
             abi: registryAbi as Abi,
-            functionName: "getExpiry",
-            args: [anyId!],
-          },
-          {
-            address: deployments.ETHRegistry,
-            abi: registryAbi as Abi,
-            functionName: "getOwner",
+            functionName: "getState",
             args: [anyId!],
           },
           {
@@ -67,11 +63,14 @@ export function useNameStatus(parentLabel?: string, account?: Address): NameStat
     query: { enabled },
   });
 
-  const expiry = data?.[0]?.result as bigint | undefined;
-  const owner = data?.[1]?.result as Address | undefined;
-  const subregistry = data?.[2]?.result as Address | undefined;
-  const resolver = data?.[3]?.result as Address | undefined;
-  const resource = data?.[4]?.result as bigint | undefined;
+  const state = data?.[0]?.result as
+    | { status: number; expiry: bigint; latestOwner: Address }
+    | undefined;
+  const expiry = state?.expiry;
+  const owner = state?.latestOwner;
+  const subregistry = data?.[1]?.result as Address | undefined;
+  const resolver = data?.[2]?.result as Address | undefined;
+  const resource = data?.[3]?.result as bigint | undefined;
 
   const isOwner = Boolean(
     owner && account && owner.toLowerCase() === account.toLowerCase(),

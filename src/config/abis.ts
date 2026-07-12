@@ -41,13 +41,8 @@ export const registryAbi = [
       },
     ],
   },
-  {
-    name: "getOwner",
-    type: "function",
-    stateMutability: "view",
-    inputs: [{ name: "anyId", type: "uint256" }],
-    outputs: [{ name: "", type: "address" }],
-  },
+  // NOTE: the deployed sepolia-official-v1-20260525-r2 registries have NO
+  // getOwner(anyId); use getState(anyId).latestOwner (or findOwner(label)).
   {
     name: "getExpiry",
     type: "function",

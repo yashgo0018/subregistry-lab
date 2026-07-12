@@ -280,16 +280,18 @@ export function buildDirectRegisterStep(params: {
         ],
       }),
       verify: async (read) => {
-        const owner = (await read({
+        const state = (await read({
           address: params.userRegistry,
           abi: registryAbi as unknown as Abi,
-          functionName: "getOwner",
+          functionName: "getState",
           args: [labelhashId(params.label)],
-        })) as Address;
-        const ok = owner.toLowerCase() === params.owner.toLowerCase();
+        })) as { latestOwner: Address };
+        const ok = state.latestOwner.toLowerCase() === params.owner.toLowerCase();
         return {
           ok,
-          detail: ok ? `${params.label} registered to ${owner}` : `Owner is ${owner}`,
+          detail: ok
+            ? `${params.label} registered to ${state.latestOwner}`
+            : `Owner is ${state.latestOwner}`,
         };
       },
     },
@@ -333,16 +335,18 @@ export function buildRegistrarRegisterSteps(params: {
         args: [params.label, params.owner, params.resolver, params.duration],
       }),
       verify: async (read) => {
-        const owner = (await read({
+        const state = (await read({
           address: params.userRegistry,
           abi: registryAbi as unknown as Abi,
-          functionName: "getOwner",
+          functionName: "getState",
           args: [labelhashId(params.label)],
-        })) as Address;
-        const ok = owner.toLowerCase() === params.owner.toLowerCase();
+        })) as { latestOwner: Address };
+        const ok = state.latestOwner.toLowerCase() === params.owner.toLowerCase();
         return {
           ok,
-          detail: ok ? `${params.label} registered to ${owner}` : `Owner is ${owner}`,
+          detail: ok
+            ? `${params.label} registered to ${state.latestOwner}`
+            : `Owner is ${state.latestOwner}`,
         };
       },
     },
