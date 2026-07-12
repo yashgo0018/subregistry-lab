@@ -1,17 +1,23 @@
 /**
  * Scans the ETHRegistry for .eth names owned by the connected wallet.
- * Chunked getLogs from the registry deploy block, incremental via a
- * per-wallet localStorage cache, ownership confirmed on-chain afterwards
- * (transfers away / expiry make log-derived candidacy stale).
+ *
+ * Fast path: ONE full-range eth_getLogs per event type against the dedicated
+ * scan RPC (Tenderly's public gateway accepts unbounded ranges). Fallback:
+ * chunked scan (<=9999 blocks, drpc free-tier limit) via the wagmi transport.
+ * Incremental via a per-wallet localStorage cache; current ownership is
+ * confirmed on-chain afterwards (transfers away / expiry make log-derived
+ * candidacy stale).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePublicClient } from "wagmi";
-import type { Abi, Address } from "viem";
+import { createPublicClient, http, type Abi, type AbiEvent, type Address, type PublicClient } from "viem";
+import { sepolia } from "viem/chains";
 import { registryAbi } from "../config/abis";
 import {
   ETH_REGISTRY_DEPLOY_BLOCK,
   LOG_CHUNK_SIZE,
+  LOG_SCAN_RPC,
   deployments,
 } from "../config/deployments";
 import { classifyError } from "../lib/errors";
@@ -20,7 +26,9 @@ import {
   emptyCache,
   mergeCache,
   planRanges,
+  type LabelRegisteredLike,
   type ScanCache,
+  type TransferSingleLike,
 } from "../lib/logs";
 import { labelhashId } from "../lib/names";
 
@@ -63,11 +71,63 @@ function saveCache(cache: ScanCache): void {
   }
 }
 
+const transferSingleEvent = (registryAbi as Abi).find(
+  (e) => e.type === "event" && e.name === "TransferSingle",
+) as AbiEvent;
+const labelRegisteredEvent = (registryAbi as Abi).find(
+  (e) => e.type === "event" && e.name === "LabelRegistered",
+) as AbiEvent;
+
+/** One getLogs pass over [from, to]; throws on RPC rejection. */
+async function fetchSpan(
+  client: PublicClient,
+  wallet: Address,
+  from: bigint,
+  to: bigint,
+): Promise<{ transfers: TransferSingleLike[]; labels: LabelRegisteredLike[] }> {
+  const [transferLogs, labelLogs] = await Promise.all([
+    client.getLogs({
+      address: deployments.ETHRegistry,
+      event: transferSingleEvent,
+      args: { to: wallet },
+      fromBlock: from,
+      toBlock: to,
+    }),
+    client.getLogs({
+      address: deployments.ETHRegistry,
+      event: labelRegisteredEvent,
+      fromBlock: from,
+      toBlock: to,
+    }),
+  ]);
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transfers: transferLogs.map((l: any) => ({
+      to: l.args.to as string,
+      id: l.args.id as bigint,
+    })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    labels: labelLogs.map((l: any) => ({
+      tokenId: l.args.tokenId as bigint,
+      label: l.args.label as string,
+      expiry: l.args.expiry as bigint,
+    })),
+  };
+}
+
 /** Grace period is a registrar-level concept; used only for a UI hint. */
 const GRACE_SECONDS = 28n * 24n * 60n * 60n;
 
 export function useOwnedNames(wallet?: Address): OwnedNamesResult {
   const client = usePublicClient();
+  const scanClient = useMemo(
+    () =>
+      createPublicClient({
+        chain: sepolia,
+        transport: http(LOG_SCAN_RPC),
+      }),
+    [],
+  );
   const [names, setNames] = useState<OwnedName[]>([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -92,58 +152,40 @@ export function useOwnedNames(wallet?: Address): OwnedNamesResult {
         const from = BigInt(cache.lastScannedBlock) + 1n;
 
         if (from <= head) {
-          let chunk = LOG_CHUNK_SIZE;
-          let ranges = planRanges(from, head, chunk);
-          const total = ranges.length;
-          let index = 0;
-          while (index < ranges.length) {
-            const range = ranges[index];
-            try {
-              const [transferLogs, labelLogs] = await Promise.all([
-                client.getLogs({
-                  address: deployments.ETHRegistry,
-                  event: (registryAbi as Abi).find(
-                    (e) => e.type === "event" && e.name === "TransferSingle",
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  ) as any,
-                  args: { to: wallet },
-                  fromBlock: range.fromBlock,
-                  toBlock: range.toBlock,
-                }),
-                client.getLogs({
-                  address: deployments.ETHRegistry,
-                  event: (registryAbi as Abi).find(
-                    (e) => e.type === "event" && e.name === "LabelRegistered",
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  ) as any,
-                  fromBlock: range.fromBlock,
-                  toBlock: range.toBlock,
-                }),
-              ]);
-              cache = mergeCache(
-                cache,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                transferLogs.map((l: any) => ({ to: l.args.to as string, id: l.args.id as bigint })),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                labelLogs.map((l: any) => ({
-                  tokenId: l.args.tokenId as bigint,
-                  label: l.args.label as string,
-                  expiry: l.args.expiry as bigint,
-                })),
-                range.toBlock,
-              );
-              saveCache(cache);
-              index += 1;
-              if (!cancelled) setProgress(Math.min(0.9, (index / total) * 0.9));
-            } catch (err) {
-              const classified = classifyError(err);
-              if (classified.kind === "rpc-range" && chunk > 1000n) {
-                // halve the chunk size and re-plan the remaining span
-                chunk = chunk / 2n;
-                ranges = planRanges(range.fromBlock, head, chunk);
-                index = 0;
-              } else {
-                throw err;
+          try {
+            // Fast path: one full-range request per event type.
+            const span = await fetchSpan(scanClient, wallet, from, head);
+            cache = mergeCache(cache, span.transfers, span.labels, head);
+            saveCache(cache);
+            if (!cancelled) setProgress(0.9);
+          } catch {
+            // Fallback: chunked scan via the wagmi transport.
+            let chunk = LOG_CHUNK_SIZE;
+            let ranges = planRanges(from, head, chunk);
+            const total = ranges.length;
+            let index = 0;
+            while (index < ranges.length) {
+              const range = ranges[index];
+              try {
+                const span = await fetchSpan(
+                  client as PublicClient,
+                  wallet,
+                  range.fromBlock,
+                  range.toBlock,
+                );
+                cache = mergeCache(cache, span.transfers, span.labels, range.toBlock);
+                saveCache(cache);
+                index += 1;
+                if (!cancelled) setProgress(Math.min(0.9, (index / total) * 0.9));
+              } catch (err) {
+                const classified = classifyError(err);
+                if (classified.kind === "rpc-range" && chunk > 500n) {
+                  chunk = chunk / 2n;
+                  ranges = planRanges(range.fromBlock, head, chunk);
+                  index = 0;
+                } else {
+                  throw err;
+                }
               }
             }
           }
@@ -178,7 +220,7 @@ export function useOwnedNames(wallet?: Address): OwnedNamesResult {
               status: "active",
             });
           } else if (expired && expiry > 0n && expiry + GRACE_SECONDS > now) {
-            // getOwner masks expired names; still show grace-period names as theirs-ish
+            // getOwner masks expired names; still show grace-period names
             confirmed.push({
               label: candidate.label,
               name: `${candidate.label}.eth`,
@@ -203,7 +245,7 @@ export function useOwnedNames(wallet?: Address): OwnedNamesResult {
       cancelled = true;
       scanning.current = false;
     };
-  }, [wallet, client, nonce]);
+  }, [wallet, client, scanClient, nonce]);
 
   return { names, loading, progress, error, refresh };
 }

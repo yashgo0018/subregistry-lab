@@ -1,13 +1,20 @@
 /**
- * Subnames registered in a UserRegistry: LabelRegistered logs from the
- * registry's deploy block (tiny range), states confirmed via getState.
+ * Subnames registered in a UserRegistry: LabelRegistered logs (full-range
+ * via the scan RPC, wagmi transport as fallback), states via getState.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePublicClient } from "wagmi";
-import type { Abi, Address } from "viem";
+import {
+  createPublicClient,
+  http,
+  type Abi,
+  type AbiEvent,
+  type Address,
+} from "viem";
+import { sepolia } from "viem/chains";
 import { registryAbi } from "../config/abis";
-import { ETH_REGISTRY_DEPLOY_BLOCK } from "../config/deployments";
+import { ETH_REGISTRY_DEPLOY_BLOCK, LOG_SCAN_RPC } from "../config/deployments";
 import { classifyError } from "../lib/errors";
 import { labelhashId } from "../lib/names";
 import { MAX_EXPIRY } from "../lib/presets";
@@ -20,8 +27,16 @@ export type Subname = {
   registered: boolean;
 };
 
+const labelRegisteredEvent = (registryAbi as Abi).find(
+  (e) => e.type === "event" && e.name === "LabelRegistered",
+) as AbiEvent;
+
 export function useRegistryState(registry?: Address, fromBlock?: bigint) {
   const client = usePublicClient();
+  const scanClient = useMemo(
+    () => createPublicClient({ chain: sepolia, transport: http(LOG_SCAN_RPC) }),
+    [],
+  );
   const [subnames, setSubnames] = useState<Subname[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
@@ -37,15 +52,18 @@ export function useRegistryState(registry?: Address, fromBlock?: bigint) {
 
     (async () => {
       try {
-        const logs = await client.getLogs({
+        const params = {
           address: registry,
-          event: (registryAbi as Abi).find(
-            (e) => e.type === "event" && e.name === "LabelRegistered",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ) as any,
+          event: labelRegisteredEvent,
           fromBlock: fromBlock ?? ETH_REGISTRY_DEPLOY_BLOCK,
           toBlock: "latest",
-        });
+        } as const;
+        let logs;
+        try {
+          logs = await scanClient.getLogs(params);
+        } catch {
+          logs = await client.getLogs(params);
+        }
         const labels = [
           ...new Set(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,7 +105,7 @@ export function useRegistryState(registry?: Address, fromBlock?: bigint) {
     return () => {
       cancelled = true;
     };
-  }, [registry, client, fromBlock, nonce]);
+  }, [registry, client, scanClient, fromBlock, nonce]);
 
   return { subnames, loading, error, refresh };
 }

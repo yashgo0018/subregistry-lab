@@ -23,5 +23,15 @@ export const deployments = {
 /** Block in which ETHRegistry was deployed; owned-name log scans start here. */
 export const ETH_REGISTRY_DEPLOY_BLOCK = 10921984n;
 
-/** Initial getLogs chunk size; halved automatically on RPC range errors. */
-export const LOG_CHUNK_SIZE = 50_000n;
+/**
+ * RPC used for log scans: Tenderly's public gateway accepts full-range
+ * eth_getLogs (verified), so a whole scan is one request per event type.
+ * The wagmi transports (drpc/publicnode) cap or reject historical getLogs.
+ */
+export const LOG_SCAN_RPC = "https://sepolia.gateway.tenderly.co";
+
+/**
+ * Chunk size for the fallback scan via the wagmi transport if the scan RPC
+ * is down. drpc's free tier rejects ranges over 10000 blocks.
+ */
+export const LOG_CHUNK_SIZE = 9_999n;

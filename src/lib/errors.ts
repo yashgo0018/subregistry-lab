@@ -109,6 +109,9 @@ export function classifyError(err: unknown): ClassifiedError {
   }
   if (
     text.includes("block range") ||
+    text.includes("blocks range") ||
+    text.includes("ranges over") ||
+    text.includes("Archive requests") ||
     text.includes("query returned more than") ||
     text.includes("Log response size exceeded")
   ) {
