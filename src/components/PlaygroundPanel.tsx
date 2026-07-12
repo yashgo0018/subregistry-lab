@@ -29,7 +29,7 @@ import { useLab } from "../state/LabContext";
 import { explorerName } from "../lib/links";
 import { useIsReady } from "./ChainGuard";
 import { TxStepper } from "./TxStepper";
-import { Badge, ExternalLink, formatExpiry } from "./ui";
+import { AddressLink, Badge, ExternalLink, NameChip, StatCard, formatExpiry } from "./ui";
 import type { StepDef } from "../lib/steps";
 
 const YEAR = 365n * 86400n;
@@ -193,8 +193,31 @@ export function PlaygroundPanel() {
 
   const registryLocked = session.locked.registryLocked;
 
+  const registeredCount = subnames.filter((s) => s.registered).length;
+  const foreverCount = subnames.filter((s) => s.registered && s.neverExpires).length;
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Explorer-style stat boxes */}
+      <div className="flex flex-wrap gap-3">
+        <StatCard label="Subnames" value={registeredCount} />
+        <StatCard
+          label="Never expiring"
+          value={foreverCount}
+          hint="Subnames registered with the maximum expiry"
+        />
+        <StatCard
+          label="Registrar"
+          value={registrar ? <AddressLink address={registrar} /> : "—"}
+          hint={registrar ? "Paid registrations enabled" : "No registrar deployed"}
+        />
+        <StatCard
+          label="Resolver"
+          value={resolver ? <AddressLink address={resolver} /> : "—"}
+          hint={resolver ? "Records live here" : "No resolver in this setup"}
+        />
+      </div>
+
       {/* Live diagram from on-chain state */}
       {liveDiagram && (
         <div className="h-80 overflow-hidden rounded-lg border border-neutral-200">
@@ -329,7 +352,10 @@ export function PlaygroundPanel() {
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 px-4 py-3"
             >
               <div className="flex items-center gap-2">
-                <span className="font-medium">{fqdn(sub.label, parentName)}</span>
+                <NameChip
+                  name={fqdn(sub.label, parentName)}
+                  href={explorerName(fqdn(sub.label, parentName))}
+                />
                 {sub.neverExpires ? (
                   <Badge tone="green">never expires</Badge>
                 ) : (

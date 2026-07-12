@@ -3,10 +3,34 @@
 
 @import "tailwindcss";
 
+/*
+ * ENS Explorer design tokens (extracted from explorer.ens.dev assets).
+ * Entity chips: pink = addresses/contracts, blue = names, green = success,
+ * amber = warnings. Cards: #faf9f7 on #e1e1e0 borders, 10-16px radii.
+ */
+@theme {
+  --color-ens-card: #faf9f7;
+  --color-ens-border: #e1e1e0;
+  --color-ens-fg: #191919;
+  --color-ens-muted: #737373;
+  --color-ens-muted-fill: #f2f2f2;
+  --color-ens-pink: #e72a96;
+  --color-ens-pink-fill: #fef0f6;
+  --color-ens-blue: #0082bb;
+  --color-ens-blue-fill: #ebf7fd;
+  --color-ens-green: #007c20;
+  --color-ens-green-fill: #e8f6ef;
+  --color-ens-amber: #984d1b;
+  --color-ens-amber-fill: #fdf6ee;
+}
+
 /* Reset for embedding */
 body {
   margin: 0;
   padding: 0;
+  font-family: "ABC Monument Grotesk", ui-sans-serif, system-ui, sans-serif;
+  background: #ffffff;
+  color: #191919;
 }
 
 #root {

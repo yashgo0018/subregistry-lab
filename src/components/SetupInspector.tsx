@@ -6,9 +6,9 @@
 
 import { useAccount } from "wagmi";
 import { useNameStatus } from "../hooks/useNameStatus";
-import { explorerRegistry } from "../lib/links";
+import { explorerName, explorerRegistry } from "../lib/links";
 import { useLab } from "../state/LabContext";
-import { AddressLink, Badge, ExternalLink, WarningBox, formatExpiry } from "./ui";
+import { AddressLink, Badge, ExternalLink, NameChip, WarningBox, formatExpiry } from "./ui";
 
 export function SetupInspector({
   onModeChosen,
@@ -31,7 +31,9 @@ export function SetupInspector({
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
         <dt className="opacity-60">Name</dt>
-        <dd className="font-medium">{name}</dd>
+        <dd>
+          <NameChip name={name} href={explorerName(name)} />
+        </dd>
         <dt className="opacity-60">Expiry</dt>
         <dd>
           {formatExpiry(status.expiry)}{" "}

@@ -1,4 +1,8 @@
-/** Small shared UI pieces. */
+/**
+ * Small shared UI pieces, styled after the ENS Explorer (explorer.ens.dev):
+ * entity chips (pink = contract addresses, blue = names), warm cards on
+ * #e1e1e0 borders, rounded stat boxes.
+ */
 
 import type { ReactNode } from "react";
 import { etherscanAddress } from "../lib/links";
@@ -8,17 +12,57 @@ export function shortAddr(addr?: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
+/** Explorer-style entity chip. */
+export function EntityChip({
+  href,
+  title,
+  variant,
+  children,
+}: {
+  href?: string;
+  title?: string;
+  variant: "pink" | "blue" | "green" | "amber" | "neutral";
+  children: ReactNode;
+}) {
+  const tones = {
+    pink: "text-ens-pink bg-ens-pink-fill",
+    blue: "text-ens-blue bg-ens-blue-fill",
+    green: "text-ens-green bg-ens-green-fill",
+    amber: "text-ens-amber bg-ens-amber-fill",
+    neutral: "text-ens-muted bg-ens-muted-fill",
+  } as const;
+  const className = `inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-sm leading-tight ${tones[variant]} ${
+    href ? "hover:underline decoration-dotted underline-offset-2" : ""
+  }`;
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noreferrer" title={title} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <span title={title} className={className}>
+      {children}
+    </span>
+  );
+}
+
+/** Contract address as a pink entity chip linking to Etherscan. */
 export function AddressLink({ address }: { address: string }) {
   return (
-    <a
-      href={etherscanAddress(address)}
-      target="_blank"
-      rel="noreferrer"
-      className="font-mono text-sm underline decoration-dotted underline-offset-2 hover:opacity-70"
-      title={address}
-    >
+    <EntityChip href={etherscanAddress(address)} title={address} variant="pink">
       {shortAddr(address)}
-    </a>
+    </EntityChip>
+  );
+}
+
+/** ENS name as a blue entity chip (optionally linked, e.g. to the explorer). */
+export function NameChip({ name, href }: { name: string; href?: string }) {
+  return (
+    <EntityChip href={href} variant="blue">
+      {name}
+    </EntityChip>
   );
 }
 
@@ -28,10 +72,33 @@ export function ExternalLink({ href, children }: { href: string; children: React
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="text-sm underline decoration-dotted underline-offset-2 hover:opacity-70"
+      className="text-sm text-ens-blue underline decoration-dotted underline-offset-2 hover:opacity-70"
     >
       {children} ↗
     </a>
+  );
+}
+
+/** Explorer-style rounded stat box ("Subnames", "Role holders", ...). */
+export function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div
+      className="flex min-w-28 flex-col gap-1 rounded-2xl border border-ens-border bg-ens-card px-4 py-3"
+      title={hint}
+    >
+      <span className="text-xs font-medium uppercase tracking-wide text-ens-muted">
+        {label}
+      </span>
+      <span className="text-2xl font-semibold leading-none text-ens-fg">{value}</span>
+    </div>
   );
 }
 
@@ -48,12 +115,12 @@ export function Section({
 }) {
   return (
     <section
-      className={`rounded-xl border p-5 transition-opacity ${
-        enabled ? "border-neutral-300 bg-white" : "border-neutral-200 bg-neutral-50 opacity-50"
+      className={`rounded-2xl border p-5 transition-opacity ${
+        enabled ? "border-ens-border bg-ens-card" : "border-ens-border bg-white opacity-50"
       }`}
     >
       <h2 className="mb-3 flex items-center gap-2 text-lg font-medium">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-xs text-white">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ens-fg text-xs text-white">
           {step}
         </span>
         {title}
@@ -73,7 +140,7 @@ export function InfoTip({ text }: { text: string }) {
       >
         i
       </span>
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-72 -translate-x-1/2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-left text-xs font-normal normal-case tracking-normal text-neutral-800 shadow-lg group-hover:block">
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-72 -translate-x-1/2 rounded-lg border border-ens-border bg-white px-3 py-2 text-left text-xs font-normal normal-case tracking-normal text-ens-fg shadow-lg group-hover:block">
         {text}
       </span>
     </span>
@@ -82,7 +149,7 @@ export function InfoTip({ text }: { text: string }) {
 
 export function WarningBox({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
+    <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
       {children}
     </div>
   );
@@ -96,10 +163,10 @@ export function Badge({
   children: ReactNode;
 }) {
   const tones = {
-    green: "bg-emerald-100 text-emerald-800",
-    amber: "bg-amber-100 text-amber-800",
-    red: "bg-red-100 text-red-800",
-    neutral: "bg-neutral-200 text-neutral-700",
+    green: "bg-ens-green-fill text-ens-green",
+    amber: "bg-ens-amber-fill text-ens-amber",
+    red: "bg-ens-pink-fill text-ens-pink",
+    neutral: "bg-ens-muted-fill text-ens-muted",
   } as const;
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>
