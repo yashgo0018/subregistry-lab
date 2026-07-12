@@ -1,0 +1,398 @@
+/**
+ * Playground: register subnames (directly as owner, or via the paid
+ * registrar), set address records, run resolve checks, and watch the live
+ * on-chain state of the setup (list + diagram).
+ */
+
+import { useMemo, useState } from "react";
+import { useAccount, usePublicClient } from "wagmi";
+import { isAddress, type Abi, type Address } from "viem";
+import { ConfigDiagram } from "../diagram";
+import { simpleRegistrarAbi } from "../config/abis";
+import { deployments } from "../config/deployments";
+import { toDiagram } from "../lib/diagramModel";
+import { classifyError } from "../lib/errors";
+import { fqdn, normalizeLabel, subnameNode } from "../lib/names";
+import { MAX_EXPIRY, getPreset } from "../lib/presets";
+import {
+  buildDirectRegisterStep,
+  buildFaucetStep,
+  buildRegistrarRegisterSteps,
+  buildSetAddrStep,
+  type StepCtx,
+} from "../lib/steps";
+import { useNameStatus } from "../hooks/useNameStatus";
+import { useRegistryState } from "../hooks/useRegistryState";
+import { useTxSequence } from "../hooks/useTxSequence";
+import { useUsdc } from "../hooks/useUsdc";
+import { useLab } from "../state/LabContext";
+import { explorerName } from "../lib/links";
+import { useIsReady } from "./ChainGuard";
+import { TxStepper } from "./TxStepper";
+import { Badge, ExternalLink, formatExpiry } from "./ui";
+import type { StepDef } from "../lib/steps";
+
+const YEAR = 365n * 86400n;
+
+export function PlaygroundPanel() {
+  const { address } = useAccount();
+  const ready = useIsReady();
+  const client = usePublicClient();
+  const { session } = useLab();
+  const nameStatus = useNameStatus(session?.parentLabel, address);
+  const registry = session?.addresses.userRegistry;
+  const registrar = session?.addresses.registrar;
+  const resolver = session?.addresses.resolver;
+  const fromBlock = session?.registryDeployBlock
+    ? BigInt(session.registryDeployBlock)
+    : undefined;
+  const { subnames, loading, refresh } = useRegistryState(registry, fromBlock);
+  const usdc = useUsdc(address, registrar);
+
+  const sequence = useTxSequence("playground");
+  const [activePlan, setActivePlan] = useState<StepDef[]>([]);
+
+  const [label, setLabel] = useState("");
+  const [ownerInput, setOwnerInput] = useState("");
+  const [years, setYears] = useState(1);
+  const [forever, setForever] = useState(false);
+  const [via, setVia] = useState<"direct" | "registrar">("direct");
+  const [formError, setFormError] = useState<string>();
+  const [resolveResults, setResolveResults] = useState<Record<string, string>>({});
+
+  const preset = session?.presetId ? getPreset(session.presetId) : undefined;
+  const parentName = session ? `${session.parentLabel}.eth` : "";
+
+  const liveDiagram = useMemo(() => {
+    if (!session || !registry) return undefined;
+    return toDiagram({
+      parentName,
+      parentOwner: address,
+      userRegistry: registry,
+      registrar,
+      registrarRoles: preset?.registrar?.grantBitmap,
+      resolver,
+      locked: session.locked.registryLocked,
+      subnames: subnames
+        .filter((s) => s.registered)
+        .map((s) => ({ label: s.label, neverExpires: s.neverExpires })),
+    });
+  }, [session, registry, registrar, resolver, subnames, preset, address, parentName]);
+
+  if (!session || !address || !registry) return null;
+
+  const runPlan = async (plan: StepDef[], ctx?: Partial<StepCtx>) => {
+    sequence.reset();
+    setActivePlan(plan);
+    const base: StepCtx = {
+      account: address,
+      parentLabel: session.parentLabel,
+      ownerInitBitmap: 0n,
+      deployResolver: false,
+      userRegistry: registry,
+      resolver,
+      registrar,
+      ...ctx,
+    };
+    const result = await sequence.run(plan, base);
+    if (result) {
+      refresh();
+      usdc.refetch();
+    }
+  };
+
+  const register = async () => {
+    setFormError(undefined);
+    const { label: cleanLabel, error } = normalizeLabel(label);
+    if (error || !cleanLabel) {
+      setFormError(error);
+      return;
+    }
+    const owner = (ownerInput.trim() || address) as Address;
+    if (!isAddress(owner)) {
+      setFormError("Owner must be a valid address.");
+      return;
+    }
+    const roleBitmap = session.subnameRoleBitmap
+      ? BigInt(session.subnameRoleBitmap)
+      : (preset?.subnameDefaults.roleBitmap ?? 0n);
+
+    if (via === "direct") {
+      const expiry = forever
+        ? MAX_EXPIRY
+        : BigInt(Math.floor(Date.now() / 1000)) + BigInt(years) * YEAR;
+      await runPlan(
+        buildDirectRegisterStep({
+          userRegistry: registry,
+          label: cleanLabel,
+          owner,
+          resolver: resolver ?? "0x0000000000000000000000000000000000000000",
+          roleBitmap,
+          expiry,
+        }),
+      );
+    } else {
+      if (!registrar || !client) return;
+      try {
+        const duration = BigInt(years) * YEAR;
+        const price = (await client.readContract({
+          address: registrar,
+          abi: simpleRegistrarAbi as Abi,
+          functionName: "getPrice",
+          args: [duration],
+        })) as bigint;
+        await runPlan(
+          buildRegistrarRegisterSteps({
+            registrar,
+            userRegistry: registry,
+            label: cleanLabel,
+            owner,
+            resolver: resolver ?? "0x0000000000000000000000000000000000000000",
+            duration,
+            price,
+            currentAllowance: usdc.allowance,
+          }),
+        );
+      } catch (err) {
+        setFormError(classifyError(err).message);
+      }
+    }
+  };
+
+  const setAddrFor = async (subLabel: string) => {
+    if (!resolver) return;
+    await runPlan(
+      buildSetAddrStep({
+        resolver,
+        node: subnameNode(subLabel, parentName),
+        fqdn: fqdn(subLabel, parentName),
+        addr: address,
+      }),
+    );
+  };
+
+  const resolveCheck = async (subLabel: string) => {
+    if (!client) return;
+    const name = fqdn(subLabel, parentName);
+    try {
+      const resolved = await client.getEnsAddress({
+        name,
+        universalResolverAddress: deployments.UniversalResolverV2,
+      });
+      setResolveResults((prev) => ({
+        ...prev,
+        [subLabel]: resolved ?? "(no address set)",
+      }));
+    } catch (err) {
+      setResolveResults((prev) => ({
+        ...prev,
+        [subLabel]: `error: ${classifyError(err).message}`,
+      }));
+    }
+  };
+
+  const registryLocked = session.locked.registryLocked;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Live diagram from on-chain state */}
+      {liveDiagram && (
+        <div className="h-80 overflow-hidden rounded-lg border border-neutral-200">
+          <ConfigDiagram nodes={liveDiagram.nodes} edges={liveDiagram.edges} />
+        </div>
+      )}
+
+      {/* Register form */}
+      <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4">
+        <h3 className="font-medium">Register a subname</h3>
+        {registrar && (
+          <div className="flex gap-2 text-sm">
+            <button
+              type="button"
+              onClick={() => setVia("direct")}
+              disabled={registryLocked && false}
+              className={`rounded-full px-3 py-1 ${via === "direct" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}
+            >
+              as owner (free)
+            </button>
+            <button
+              type="button"
+              onClick={() => setVia("registrar")}
+              className={`rounded-full px-3 py-1 ${via === "registrar" ? "bg-neutral-900 text-white" : "border border-neutral-300"}`}
+            >
+              via registrar (paid)
+            </button>
+          </div>
+        )}
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="opacity-70">Label</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="alice"
+                className="w-36 rounded-lg border border-neutral-300 px-3 py-2"
+              />
+              <span className="text-sm opacity-60">.{parentName}</span>
+            </div>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="opacity-70">Owner (default: you)</span>
+            <input
+              type="text"
+              value={ownerInput}
+              onChange={(e) => setOwnerInput(e.target.value)}
+              placeholder={address}
+              className="w-64 rounded-lg border border-neutral-300 px-3 py-2 font-mono text-xs"
+            />
+          </label>
+          {!forever && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="opacity-70">Years</span>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={years}
+                onChange={(e) => setYears(Math.max(1, Number(e.target.value || 1)))}
+                className="w-20 rounded-lg border border-neutral-300 px-3 py-2"
+              />
+            </label>
+          )}
+          {via === "direct" && (
+            <label className="flex items-center gap-2 pb-2 text-sm">
+              <input
+                type="checkbox"
+                checked={forever}
+                onChange={(e) => setForever(e.target.checked)}
+              />
+              never expires
+            </label>
+          )}
+          <button
+            type="button"
+            onClick={register}
+            disabled={!ready || sequence.status === "running"}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-700 disabled:opacity-40"
+          >
+            Register
+          </button>
+        </div>
+        {via === "registrar" && (
+          <div className="flex items-center gap-3 text-sm">
+            <span className="opacity-70">
+              Your test USDC: {(Number(usdc.balance) / 1e6).toFixed(2)}
+            </span>
+            <button
+              type="button"
+              disabled={!ready || sequence.status === "running"}
+              onClick={() => runPlan(buildFaucetStep({ account: address, amount: 100_000_000n }))}
+              className="rounded-lg border border-neutral-300 px-3 py-1 hover:border-neutral-600 disabled:opacity-40"
+            >
+              Faucet: mint 100 USDC
+            </button>
+          </div>
+        )}
+        {formError && <p className="text-sm text-red-700">{formError}</p>}
+        {activePlan.length > 0 && (
+          <TxStepper
+            plan={activePlan}
+            steps={sequence.steps}
+            running={sequence.status === "running"}
+          />
+        )}
+      </div>
+
+      {/* Subname list */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium">Subnames in this registry</h3>
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={loading}
+            className="rounded-lg border border-neutral-300 px-3 py-1 text-sm hover:border-neutral-600 disabled:opacity-40"
+          >
+            ↻ refresh
+          </button>
+        </div>
+        {loading && <p className="text-sm opacity-70">Loading…</p>}
+        {!loading && subnames.length === 0 && (
+          <p className="text-sm opacity-70">None yet, register one above.</p>
+        )}
+        <ul className="flex flex-col gap-2">
+          {subnames.map((sub) => (
+            <li
+              key={sub.label}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 px-4 py-3"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{fqdn(sub.label, parentName)}</span>
+                {sub.neverExpires ? (
+                  <Badge tone="green">never expires</Badge>
+                ) : (
+                  <Badge tone={sub.registered ? "green" : "red"}>
+                    {sub.registered ? `expires ${formatExpiry(sub.expiry)}` : "expired"}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                {resolver && (
+                  <button
+                    type="button"
+                    onClick={() => setAddrFor(sub.label)}
+                    disabled={!ready || sequence.status === "running"}
+                    className="underline decoration-dotted underline-offset-2 disabled:opacity-40"
+                  >
+                    set my address
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => resolveCheck(sub.label)}
+                  className="underline decoration-dotted underline-offset-2"
+                >
+                  resolve check
+                </button>
+                <ExternalLink href={explorerName(fqdn(sub.label, parentName))}>
+                  explorer
+                </ExternalLink>
+              </div>
+              {resolveResults[sub.label] && (
+                <p className="w-full text-xs">
+                  resolves to:{" "}
+                  <code className="font-mono">{resolveResults[sub.label]}</code>
+                  {resolveResults[sub.label].toLowerCase() === address.toLowerCase() && " ✓"}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Renew via registrar */}
+      {registrar && (
+        <p className="text-xs opacity-60">
+          Renewals: use "via registrar" registration on an existing name's label to extend
+          it, or ask the owner to renew directly. Registry status refreshes with ↻.
+        </p>
+      )}
+
+      <p className="text-xs opacity-60">
+        Tip: to try a different configuration on {parentName}, scroll up to "Current setup"
+        and choose "Replace with a new setup". Old registries keep their subnames and can be
+        re-adopted later.
+      </p>
+      {nameStatus.hasSubregistry &&
+        registry &&
+        nameStatus.subregistry?.toLowerCase() !== registry.toLowerCase() && (
+          <p className="text-sm text-amber-800">
+            Heads up: {parentName} currently points at a different registry than this
+            session's. Re-run the link step or adopt the on-chain one.
+          </p>
+        )}
+    </div>
+  );
+}
