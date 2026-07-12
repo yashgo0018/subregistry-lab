@@ -76,8 +76,10 @@ export function useNameStatus(parentLabel?: string, account?: Address): NameStat
     owner && account && owner.toLowerCase() === account.toLowerCase(),
   );
 
-  // Roles are per-account (they do not automatically follow token transfers),
-  // so canConfigure comes from an explicit hasRoles read, never from ownership.
+  // The owner's roles move with the token on transfer (PermissionedRegistry
+  // calls _transferRoles in its transfer hook), but third-party grants don't,
+  // and roles can be revoked, so canConfigure always comes from a live
+  // hasRoles read rather than being inferred from ownership.
   const { data: roleData } = useReadContracts({
     contracts:
       enabled && resource !== undefined

@@ -50,10 +50,14 @@ export type RoleCatalogEntry = {
   bit: bigint;
   /** Short badge label, e.g. for diagram edges. */
   short: string;
-  /** Plain-language description of the user-tier role. */
+  /** Plain-language description of the user-tier role (registry scope). */
   label: string;
   /** Plain-language description of the admin counterpart (empty = admin-only role). */
   adminLabel: string;
+  /** Row label when the role is granted to a subname owner on their own name. */
+  subnameLabel?: string;
+  /** Tooltip: what the permission does for a subname owner, verified against the contracts. */
+  subnameDetail?: string;
   /** True when the role only exists as an admin-half bit (no user tier). */
   adminOnly?: boolean;
   /** Roles that let the holder take names away or break the setup. */
@@ -91,6 +95,9 @@ export const ROLE_CATALOG: RoleCatalogEntry[] = [
     short: "UNREGISTER",
     label: "Delete registered subnames",
     adminLabel: "Grant/revoke the delete permission",
+    subnameLabel: "Delete their subname",
+    subnameDetail:
+      "The owner can permanently remove the subname from the registry, freeing the label for re-registration. Without this, not even the owner can delete it.",
     dangerous: true,
   },
   {
@@ -99,6 +106,9 @@ export const ROLE_CATALOG: RoleCatalogEntry[] = [
     short: "RENEW",
     label: "Extend subname expiry",
     adminLabel: "Grant/revoke the renew permission",
+    subnameLabel: "Extend their subname's expiry",
+    subnameDetail:
+      "The owner can push the expiry further into the future at any time (the registry itself charges nothing; paid renewals go through a registrar). Without this, the owner depends on a registrar contract or a registry admin to keep the name alive.",
     dangerous: true,
   },
   {
@@ -107,6 +117,9 @@ export const ROLE_CATALOG: RoleCatalogEntry[] = [
     short: "SUBREGISTRY",
     label: "Change a subname's own child registry",
     adminLabel: "Grant/revoke the child-registry permission",
+    subnameLabel: "Give their subname its own subnames",
+    subnameDetail:
+      "The owner can attach a child registry to the subname, enabling deeper names like photos.alice.nick.eth, and can detach or replace that child registry later.",
     dangerous: true,
   },
   {
@@ -115,6 +128,9 @@ export const ROLE_CATALOG: RoleCatalogEntry[] = [
     short: "RESOLVER",
     label: "Change a subname's resolver",
     adminLabel: "Grant/revoke the resolver permission",
+    subnameLabel: "Choose their subname's resolver",
+    subnameDetail:
+      "The owner can point the subname at a different resolver contract. This controls where records live; editing records inside a resolver is governed by that resolver's own permissions.",
     dangerous: true,
   },
   {
@@ -145,6 +161,9 @@ export const ROLE_CATALOG: RoleCatalogEntry[] = [
     short: "TRANSFER",
     label: "Authorize subname token transfers",
     adminLabel: "",
+    subnameLabel: "Transfer their subname",
+    subnameDetail:
+      "Allows the subname token to be sent to another wallet (the registry checks this on the sender at transfer time). Without it, the subname is locked to its current owner. This permission only exists in admin form, so its holder can also delegate it.",
     adminOnly: true,
   },
 ];

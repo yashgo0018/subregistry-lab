@@ -45,6 +45,15 @@ describe("role constants", () => {
       if (!entry.adminOnly) expect(entry.adminLabel.length).toBeGreaterThan(0);
     }
   });
+
+  it("subname-editor roles carry per-name labels and tooltip details", () => {
+    const editorRoles = ["unregister", "renew", "setSubregistry", "setResolver", "canTransferAdmin"];
+    for (const id of editorRoles) {
+      const entry = ROLE_CATALOG.find((c) => c.id === id)!;
+      expect(entry.subnameLabel?.length).toBeGreaterThan(0);
+      expect(entry.subnameDetail?.length).toBeGreaterThan(20);
+    }
+  });
 });
 
 describe("compose/decompose", () => {

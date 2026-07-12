@@ -63,6 +63,23 @@ export function Section({
   );
 }
 
+/** ⓘ with a hover tooltip; pure CSS, no positioning deps. */
+export function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-block align-middle">
+      <span
+        className="ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-neutral-400 text-[10px] leading-none text-neutral-500"
+        aria-label={text}
+      >
+        i
+      </span>
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-72 -translate-x-1/2 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-left text-xs font-normal normal-case tracking-normal text-neutral-800 shadow-lg group-hover:block">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 export function WarningBox({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
