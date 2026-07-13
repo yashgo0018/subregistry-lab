@@ -64,12 +64,14 @@ export function PlaygroundPanel() {
   const [label, setLabel] = useState("");
   const [ownerInput, setOwnerInput] = useState("");
   const [years, setYears] = useState(1);
-  const [forever, setForever] = useState(false);
+  // null = follow the preset default ('max' expiry presets start ticked)
+  const [foreverOverride, setForeverOverride] = useState<boolean | null>(null);
   const [via, setVia] = useState<"direct" | "registrar">("direct");
   const [formError, setFormError] = useState<string>();
   const [resolveResults, setResolveResults] = useState<Record<string, string>>({});
 
   const preset = session?.presetId ? getPreset(session.presetId) : undefined;
+  const forever = foreverOverride ?? preset?.subnameDefaults.expiry === "max";
   const parentName = session ? `${session.parentLabel}.eth` : "";
 
   const liveDiagram = useMemo(() => {
@@ -298,7 +300,7 @@ export function PlaygroundPanel() {
               <input
                 type="checkbox"
                 checked={forever}
-                onChange={(e) => setForever(e.target.checked)}
+                onChange={(e) => setForeverOverride(e.target.checked)}
               />
               never expires
             </label>
