@@ -54,18 +54,21 @@ export function RoleMatrixEditor({
               </td>
               {role.adminOnly ? (
                 // Admin-only role: ONE bit grants both the capability and its
-                // delegation, so the checkbox spans both columns.
-                <td colSpan={2} className="py-2 text-center">
-                  <label className="inline-flex items-center gap-1.5">
+                // delegation. Checkbox stays aligned with the Allowed column;
+                // the delegate column shows that it's bundled.
+                <>
+                  <td className="py-2 text-center">
                     <input
                       type="checkbox"
                       disabled={disabled}
                       checked={(bitmap & role.bit) !== 0n}
                       onChange={() => toggle(role.bit)}
                     />
-                    <span className="text-xs opacity-60">includes delegation</span>
-                  </label>
-                </td>
+                  </td>
+                  <td className="py-2 text-center text-xs opacity-60">
+                    {(bitmap & role.bit) !== 0n ? "included" : "—"}
+                  </td>
+                </>
               ) : (
                 <>
                   <td className="py-2 text-center">
