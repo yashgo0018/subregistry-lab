@@ -18,19 +18,19 @@ function GatewayNode({ data, selected }: NodeProps<GatewayNodeType>) {
         ${selected ? "ring-2 ring-[var(--diagram-ink)] ring-offset-2 ring-offset-[var(--diagram-paper)]" : ""}
       `}
     >
-      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
+      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-stroke)]" />
       <div
-        className="absolute w-20 h-20 border-2 border-[var(--diagram-ink)] bg-[var(--diagram-node-bg)] rotate-45"
+        className="absolute w-20 h-20 border-[1.5px] border-[var(--diagram-stroke)] bg-[var(--diagram-paper)] rotate-45"
         style={{ top: "50%", left: "50%", marginTop: -40, marginLeft: -40 }}
       />
       {/* The diamond behind is a rotated sibling; the label itself must stay unrotated. */}
-      <div className="relative z-10 text-center px-1 text-[var(--diagram-font-sub)] font-semibold leading-tight text-[var(--diagram-ink)]">
+      <div className="diagram-semimono relative z-10 text-center px-1 text-[var(--diagram-font-sub)] font-medium leading-tight text-[var(--diagram-ink)]">
         <div>{data.label}</div>
         {data.id != null && data.id !== "" && (
-          <div className="opacity-80 mt-0.5">{data.id}</div>
+          <div className="opacity-75 mt-0.5">{data.id}</div>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
+      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-stroke)]" />
     </div>
   );
 }

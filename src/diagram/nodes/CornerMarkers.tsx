@@ -1,21 +1,22 @@
 /**
- * Four corner dots on a node — Figma "corner nodes": blue on blue nodes, brown on brown.
+ * Filled corner sockets on a node frame (ENS Diagram System: small squares
+ * with a slight radius, lapis/900 in protocol mode).
  */
 
 import { memo } from "react";
 import type { DiagramVariant } from "../types";
 
-const dotClass = "absolute w-1.5 h-1.5 rounded-full pointer-events-none";
+const socketClass =
+  "absolute w-1.5 h-1.5 rounded-[2px] pointer-events-none bg-[var(--diagram-socket)]";
 const cornerPos = "translate-x-[-3px] translate-y-[-3px]";
 
-function CornerMarkers({ variant = "blue" }: { variant?: DiagramVariant }) {
-  const bg = variant === "brown" ? "var(--diagram-corner-brown)" : "var(--diagram-corner-blue)";
+function CornerMarkers({ variant: _variant = "blue" }: { variant?: DiagramVariant }) {
   return (
     <>
-      <span className={`${dotClass} top-0 left-0 ${cornerPos}`} style={{ background: bg }} />
-      <span className={`${dotClass} top-0 right-0 ${cornerPos}`} style={{ background: bg }} />
-      <span className={`${dotClass} bottom-0 right-0 ${cornerPos}`} style={{ background: bg }} />
-      <span className={`${dotClass} bottom-0 left-0 ${cornerPos}`} style={{ background: bg }} />
+      <span className={`${socketClass} top-0 left-0 ${cornerPos}`} />
+      <span className={`${socketClass} top-0 right-0 ${cornerPos}`} />
+      <span className={`${socketClass} bottom-0 right-0 ${cornerPos}`} />
+      <span className={`${socketClass} bottom-0 left-0 ${cornerPos}`} />
     </>
   );
 }

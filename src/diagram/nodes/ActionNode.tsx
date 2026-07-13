@@ -1,35 +1,30 @@
 /**
- * Action node: pill (e.g. eth, montoya.eth), dotted border, corner markers. Figma 1153:571.
+ * Action node: plain name label without pill chrome (ENS Diagram System
+ * protocol mode) — Marist serif, lapis/900 ink, sits directly on the field.
  */
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { Node } from "@xyflow/react";
 import type { ActionNodeData } from "../types";
-import CornerMarkers from "./CornerMarkers";
 
 export type ActionNodeType = Node<ActionNodeData, "action">;
 
-function ActionNode({ data, selected }: NodeProps<ActionNodeType>) {
-  const variant = data.variant ?? "blue";
-  const isBrown = variant === "brown";
-  const bg = isBrown ? "var(--diagram-node-bg-brown)" : "var(--diagram-node-bg)";
-  const ink = isBrown ? "var(--diagram-ink-brown)" : "var(--diagram-ink)";
-  const ring = selected ? (isBrown ? "ring-2 ring-[var(--diagram-ink-brown)]" : "ring-2 ring-[var(--diagram-ink)]") : "";
+const handleClass =
+  "!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-stroke)]";
 
+function ActionNode({ data, selected }: NodeProps<ActionNodeType>) {
   return (
     <div
       className={`
-        diagram-action diagram-node-dotted rounded-full border-2 px-4 py-2 relative whitespace-nowrap
-        text-[var(--diagram-font-main)] font-semibold
-        ${selected ? `${ring} ring-offset-2 ring-offset-[var(--diagram-paper)]` : ""}
+        diagram-action relative whitespace-nowrap rounded-md px-3 py-1.5
+        bg-[var(--diagram-paper)] text-[var(--diagram-ink)]
+        ${selected ? "ring-2 ring-[var(--diagram-stroke)] ring-offset-2 ring-offset-[var(--diagram-paper)]" : ""}
       `}
-      style={{ background: bg, color: ink, borderColor: ink }}
     >
-      <CornerMarkers variant={variant} />
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)]" style={{ borderColor: ink }} />
-      <span className="underline">{data.label}</span>
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)]" style={{ borderColor: ink }} />
+      <Handle type="target" position={Position.Left} className={handleClass} />
+      <span className="diagram-marist text-[var(--diagram-font-main)]">{data.label}</span>
+      <Handle type="source" position={Position.Right} className={handleClass} />
     </div>
   );
 }

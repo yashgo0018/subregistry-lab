@@ -1,6 +1,29 @@
 /* ABC Monument Grotesk font family */
 @import url('https://fonts.cdnfonts.com/css/abc-monument-grotesk');
 
+/* ENS diagram fonts (woff2 copied from the ENS Fonts bundle via ens-diagrams) */
+@font-face {
+  font-family: "ABC Marist";
+  src: url("/fonts/ABCMarist-Book.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ABC Monument Grotesk Semi-Mono";
+  src: url("/fonts/ABCMonumentGroteskSemi-Mono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ABC Monument Grotesk Semi-Mono";
+  src: url("/fonts/ABCMonumentGroteskSemi-Mono-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import "tailwindcss";
 
 /*
@@ -67,47 +90,54 @@ body {
   --color-azure-500: #0082bb;
 }
 
-/* Diagram builder: Figma 1153:571 — graph paper, blue/brown nodes, dotted borders, corner dots */
+/*
+ * Diagram theme: ENS Diagram System "protocol" mode, adapted from
+ * ens-diagrams (theme.ts): lapis/100 graph-paper field, lapis/500 strokes,
+ * lapis/900 ink, Marist for names, Semi-Mono for roles/addresses,
+ * dark resolver stack with corner sockets.
+ */
 .diagram-canvas {
-  --diagram-paper: #e8ecf0;
-  --diagram-grid: #b0c4d8;
-  --diagram-ink: #1e3a52;
-  --diagram-fill: #a8c0d8;
-  --diagram-node-bg: #b8cce0;
-  --diagram-corner-blue: #5a8ab0;
-  --diagram-node-bg-brown: #d4c4a8;
-  --diagram-ink-brown: #6b5a45;
-  --diagram-corner-brown: #9a8568;
+  --diagram-paper: #dbf0f8; /* lapis/100 */
+  --diagram-stroke: #0082bb; /* lapis/500 */
+  --diagram-ink: #02293b; /* lapis/900 */
+  --diagram-node-bg: #dbf0f8;
+  --diagram-resolver-fill: color-mix(in srgb, #02293b 82%, #dbf0f8);
+  --diagram-resolver-label: #dbf0f8;
+  --diagram-socket: #02293b;
+  --diagram-corner-blue: #02293b;
+  --diagram-corner-brown: #02293b;
+  --diagram-node-bg-brown: var(--diagram-resolver-fill);
+  --diagram-ink-brown: var(--diagram-resolver-label);
   --diagram-node-radius: 12px;
-  --diagram-font-main: 0.9375rem;
+  --diagram-font-main: 1rem;
   --diagram-font-sub: 0.75rem;
 }
-.diagram-node-dotted {
-  border-style: dotted;
+.diagram-marist {
+  font-family: "ABC Marist", Georgia, serif;
 }
-.diagram-noise-overlay {
-  opacity: 0.22;
-  mix-blend-mode: multiply;
+.diagram-semimono {
+  font-family: "ABC Monument Grotesk Semi-Mono", ui-monospace, monospace;
+}
+.diagram-node-dotted {
+  border-style: dashed;
 }
 .diagram-flow .react-flow__edge-path {
-  stroke: var(--diagram-ink);
-  stroke-width: 2;
+  stroke: var(--diagram-stroke);
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 6 4;
 }
 .diagram-flow .react-flow__edge .react-flow__edge-label {
-  font-family: ui-monospace, monospace;
-  font-weight: 600;
+  font-family: "ABC Monument Grotesk Semi-Mono", ui-monospace, monospace;
+  font-weight: 500;
   font-size: var(--diagram-font-sub);
   fill: var(--diagram-ink);
 }
 .diagram-flow .react-flow__edge .react-flow__edge-label-bg {
-  stroke: var(--diagram-ink);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 2;
-  rx: 8;
-  ry: 8;
+  fill: var(--diagram-paper);
+  stroke: none;
+  rx: 6;
+  ry: 6;
 }
 .diagram-flow .react-flow__controls button {
   border-color: var(--diagram-ink);

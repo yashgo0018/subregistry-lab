@@ -10,7 +10,8 @@ import { LabProvider } from "./state/LabContext";
  */
 function App() {
   return (
-    <div className="min-h-screen w-screen">
+    // w-full, not w-screen: 100vw includes the scrollbar -> horizontal overflow
+    <div className="min-h-screen w-full">
       <LabProvider>
         <Routes>
           <Route path="/" element={<LabPage />} />
