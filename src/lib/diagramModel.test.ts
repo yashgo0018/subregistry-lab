@@ -106,6 +106,25 @@ describe("classifyResolver", () => {
     ).toBe("foreign");
     expect(classifyResolver(DEFAULT, undefined)).toBe("foreign");
   });
+
+  it("a zero-address default never matches", () => {
+    expect(
+      classifyResolver(DEFAULT, "0x0000000000000000000000000000000000000000"),
+    ).toBe("foreign");
+  });
+});
+
+describe("toDiagram shared resolver from the parent pointer", () => {
+  it("a zero-address shared resolver draws no resolver node", () => {
+    const d = toDiagram({
+      parentName: "nick.eth",
+      userRegistry: "0x2222222222222222222222222222222222222222",
+      resolver: "0x0000000000000000000000000000000000000000",
+      subnames: [{ label: "alice" }],
+    });
+    expect(d.nodes.find((n) => n.id === "resolver")).toBeUndefined();
+    expect(d.edges.find((e) => e.id === "e-registry-resolver")).toBeUndefined();
+  });
 });
 
 describe("toDiagram foreign resolvers", () => {

@@ -195,6 +195,37 @@ export function buildSetupSteps(preset: Preset | PresetId): StepDef[] {
       },
     },
     {
+      id: "set-parent-resolver",
+      title: "Point your name at the resolver",
+      explain:
+        "Sets your name's resolver on the .eth registry. The app treats whatever the parent points at as the setup's shared resolver, so this keeps parent and subnames in sync.",
+      // Only skipped when this setup has no resolver at all; reusing an
+      // already-linked resolver auto-skips via the pre-run verify.
+      skipIf: (ctx) => !ctx.deployResolver && !ctx.resolver,
+      build: (ctx) => ({
+        type: "write",
+        address: deployments.ETHRegistry,
+        abi: registryAbi as unknown as Abi,
+        functionName: "setResolver",
+        args: [labelhashId(ctx.parentLabel), ctx.resolver],
+      }),
+      verify: async (read, ctx) => {
+        const linked = (await read({
+          address: deployments.ETHRegistry,
+          abi: registryAbi as unknown as Abi,
+          functionName: "getResolver",
+          args: [ctx.parentLabel],
+        })) as Address;
+        const ok = linked.toLowerCase() === (ctx.resolver ?? "").toLowerCase();
+        return {
+          ok,
+          detail: ok
+            ? `${ctx.parentLabel}.eth records live at ${linked}`
+            : `Resolver mismatch: registry reports ${linked}`,
+        };
+      },
+    },
+    {
       id: "set-parent",
       title: "Record the parent pointer",
       explain:

@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from "react";
 import { useAccount, usePublicClient } from "wagmi";
-import { isAddress, type Abi, type Address } from "viem";
+import { isAddress, zeroAddress, type Abi, type Address } from "viem";
 import { ConfigDiagram } from "../diagram";
 import type { DiagramNode } from "../diagram";
 import { simpleRegistrarAbi } from "../config/abis";
@@ -44,7 +44,13 @@ export function PlaygroundPanel() {
   const { session } = useLab();
   const nameStatus = useNameStatus(session?.parentLabel, address);
   const registry = session?.addresses.userRegistry;
-  const resolver = session?.addresses.resolver;
+  // The shared resolver is on-chain truth: whatever the parent name points at
+  // on the .eth registry (the setup sequence keeps this in sync). The session
+  // resolver is only a planning value and can drift across replace/relink.
+  const resolver =
+    nameStatus.resolver && nameStatus.resolver !== zeroAddress
+      ? nameStatus.resolver
+      : undefined;
   const fromBlock = session?.registryDeployBlock
     ? BigInt(session.registryDeployBlock)
     : undefined;
@@ -242,9 +248,13 @@ export function PlaygroundPanel() {
           hint={registrar ? "Paid registrations enabled" : "No registrar deployed"}
         />
         <StatCard
-          label="Resolver"
+          label="Shared resolver"
           value={resolver ? <AddressLink address={resolver} /> : "—"}
-          hint={resolver ? "Records live here" : "No resolver in this setup"}
+          hint={
+            resolver
+              ? "The parent name's resolver; subname records live here by default"
+              : "The parent name has no resolver set"
+          }
         />
       </div>
 
@@ -267,7 +277,6 @@ export function PlaygroundPanel() {
           node={inspected}
           sharedResolver={resolver}
           parentName={parentName}
-          parentResolver={nameStatus.resolver}
           subnames={subnames}
           onClose={() => setInspected(null)}
         />
@@ -491,14 +500,12 @@ function ResolverInspector({
   node,
   sharedResolver,
   parentName,
-  parentResolver,
   subnames,
   onClose,
 }: {
   node: DiagramNode;
   sharedResolver?: Address;
   parentName: string;
-  parentResolver?: Address;
   subnames: Subname[];
   onClose: () => void;
 }) {
@@ -515,13 +522,8 @@ function ResolverInspector({
         (s) => s.registered && s.resolver.toLowerCase() === addr.toLowerCase(),
       )
     : [];
-  const servesParent =
-    isShared &&
-    Boolean(
-      sharedResolver &&
-        parentResolver &&
-        parentResolver.toLowerCase() === sharedResolver.toLowerCase(),
-    );
+  // The shared node only exists because the parent points at it.
+  const servesParent = isShared && Boolean(sharedResolver);
 
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-ens-border bg-ens-card p-4">
@@ -529,7 +531,7 @@ function ResolverInspector({
         <h4 className="flex items-center gap-2 text-sm font-medium">
           Resolver {addr && <AddressLink address={addr} />}
           {isShared ? (
-            <Badge tone="green">yours (shared)</Badge>
+            <Badge tone="green">shared (parent's resolver)</Badge>
           ) : (
             <Badge tone="amber">own resolver</Badge>
           )}
@@ -567,8 +569,9 @@ function ResolverInspector({
       )}
       {isShared && (
         <p className="text-xs opacity-60">
-          You hold this resolver's root roles: you can set records for every name it
-          serves. Subnames that switch to their own resolver leave this control.
+          This is whatever resolver the parent name points at on the .eth registry.
+          Subnames registered through this app use it by default; a subname can
+          switch to its own resolver at any time.
         </p>
       )}
     </div>

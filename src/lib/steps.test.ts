@@ -35,10 +35,42 @@ describe("buildSetupSteps", () => {
       "deploy-registry",
       "deploy-resolver",
       "link",
+      "set-parent-resolver",
       "set-parent",
       "deploy-registrar",
       "grant-registrar",
     ]);
+  });
+
+  it("set-parent-resolver points the parent name at the setup's resolver", async () => {
+    const step = buildSetupSteps("fully-controlled").find(
+      (s) => s.id === "set-parent-resolver",
+    )!;
+    const ctx = baseCtx({ resolver: RESOLVER });
+    const action = step.build(ctx);
+    if (action.type !== "write") throw new Error("expected write");
+    expect(action.address).toBe(deployments.ETHRegistry);
+    expect(action.functionName).toBe("setResolver");
+    expect(action.args[1]).toBe(RESOLVER);
+
+    const good = await step.verify!(async () => RESOLVER, ctx);
+    expect(good.ok).toBe(true);
+    const bad = await step.verify!(async () => REGISTRAR, ctx);
+    expect(bad.ok).toBe(false);
+  });
+
+  it("set-parent-resolver is skipped only when the setup has no resolver at all", () => {
+    const step = buildSetupSteps("fully-controlled").find(
+      (s) => s.id === "set-parent-resolver",
+    )!;
+    // "none" picked: no deploy, no reuse
+    expect(step.skipIf!(baseCtx({ deployResolver: false }))).toBe(true);
+    // fresh deploy: resolver lands in ctx before this step runs
+    expect(step.skipIf!(baseCtx({ deployResolver: true }))).toBe(false);
+    // reusing an existing resolver
+    expect(step.skipIf!(baseCtx({ deployResolver: false, resolver: RESOLVER }))).toBe(
+      false,
+    );
   });
 
   it("set-parent records the ETHRegistry as parent and verifies via getParent", async () => {

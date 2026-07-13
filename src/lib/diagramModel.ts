@@ -13,7 +13,7 @@ export type SetupView = {
   /** Real address, or a short placeholder like "new" for planned contracts. */
   userRegistry?: string;
   registrar?: string;
-  /** The setup's shared/default resolver. */
+  /** The shared/default resolver: what the parent name points at (zero/undefined = none). */
   resolver?: string;
   /** Roles the registrar holds on the registry root. */
   registrarRoles?: bigint;
@@ -128,12 +128,16 @@ export function toDiagram(setup: SetupView): DiagramState {
     });
   }
 
+  // Zero address means "no shared resolver": don't draw a node for it.
+  const sharedRes =
+    setup.resolver && setup.resolver.toLowerCase() !== ZERO ? setup.resolver : undefined;
+
   // Classify subnames first: deviations relabel the aggregate records edge.
   const subs = setup.subnames ?? [];
-  const kinds = subs.map((sub) => classifyResolver(sub.resolver, setup.resolver));
+  const kinds = subs.map((sub) => classifyResolver(sub.resolver, sharedRes));
   const hasForeign = kinds.includes("foreign");
 
-  if (setup.resolver) {
+  if (sharedRes) {
     nodes.push({
       id: "resolver",
       type: "resolver",
@@ -141,7 +145,7 @@ export function toDiagram(setup: SetupView): DiagramState {
       data: {
         label: "Resolver",
         owner: displayAddr(setup.parentOwner),
-        addr: displayAddr(setup.resolver),
+        addr: displayAddr(sharedRes),
       },
     });
     if (setup.userRegistry) {

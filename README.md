@@ -10,7 +10,7 @@ A browser playground for experimenting with **ENSv2 subname registry setups on S
    - **Fully controlled**: you keep every permission (default for experimenting).
    - **Standard rentable**: also deploys the guide's SimpleSubnameRegistrar so anyone can register subnames for a fee in test USDC (built-in faucet).
    - **Unruggable, unexpiring**: subnames registered with a never-expiring lifetime and minimal permissions, plus an optional lock step that irreversibly removes your own dangerous roles.
-4. **Execute**: the app walks through the transactions one by one (deploy registry → deploy resolver → link name → deploy registrar → grant roles), verifying each result on-chain.
+4. **Execute**: the app walks through the transactions one by one (deploy registry → deploy resolver → link name → point the name at the resolver → deploy registrar → grant roles), verifying each result on-chain.
 5. **Playground**: register subnames (free as owner, or paid via the registrar), set address records, run live resolve checks, and watch the setup diagram update.
 6. **Experiment freely**: re-running the setup replaces the registry linked to your name. Old registries keep their subnames and can be re-adopted later.
 
