@@ -4,7 +4,7 @@
  * "protocol" mode (lapis graph paper, 8px minor / 80px major grid).
  */
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -13,6 +13,7 @@ import {
   getNodesBounds,
   useNodesInitialized,
   useReactFlow,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -22,38 +23,42 @@ import type { DiagramEdge, DiagramNode } from "./types";
 /** Margin between the pane edge and the content, in screen pixels. */
 const FIT_MARGIN = 24;
 
+type FitApi = Pick<
+  ReactFlowInstance<DiagramNode, DiagramEdge>,
+  "fitView" | "getNodes" | "getViewport" | "setViewport"
+>;
+
 /**
- * Fit the whole configuration into view, anchored TOP-LEFT (document-style)
- * instead of fitView's centering. fitView does the robust zoom computation
- * (pane measurement included); we then re-anchor its result so the content's
- * top-left corner sits at the margin. Runs once nodes report measured
- * dimensions and again whenever the node set changes (subnames loading in).
+ * Fit the whole configuration into view, anchored TOP-LEFT (document-style).
+ * fitView does the robust zoom computation (pane measurement included); we
+ * then re-anchor its result so the content's top-left corner sits at the
+ * margin instead of being centered.
  */
-function FitOnReady({ nodeCount }: { nodeCount: number }) {
+async function fitTopLeft(api: FitApi): Promise<void> {
+  await api.fitView({ padding: 0.05, maxZoom: 1.1 });
+  const bounds = getNodesBounds(api.getNodes());
+  if (bounds.width === 0 || bounds.height === 0) return;
+  const { zoom } = api.getViewport();
+  await api.setViewport({
+    x: FIT_MARGIN - bounds.x * zoom,
+    y: FIT_MARGIN - bounds.y * zoom,
+    zoom,
+  });
+}
+
+/** Refit when the node set changes after init (e.g. subnames loading in). */
+function RefitOnChange({ nodeCount }: { nodeCount: number }) {
   const initialized = useNodesInitialized();
-  const { fitView, getNodes, getViewport, setViewport } = useReactFlow();
+  const api = useReactFlow<DiagramNode, DiagramEdge>();
+  const lastFitted = useRef(0);
 
   useEffect(() => {
-    if (!initialized) return;
-    let cancelled = false;
-    // next frame: dimensions are committed by then
-    requestAnimationFrame(async () => {
-      if (cancelled) return;
-      await fitView({ padding: 0.05, maxZoom: 1.1 });
-      if (cancelled) return;
-      const bounds = getNodesBounds(getNodes());
-      if (bounds.width === 0 || bounds.height === 0) return;
-      const { zoom } = getViewport();
-      void setViewport({
-        x: FIT_MARGIN - bounds.x * zoom,
-        y: FIT_MARGIN - bounds.y * zoom,
-        zoom,
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [initialized, nodeCount, fitView, getNodes, getViewport, setViewport]);
+    if (!initialized || nodeCount === lastFitted.current) return;
+    lastFitted.current = nodeCount;
+    // next frame: node dimensions are committed by then
+    const raf = requestAnimationFrame(() => void fitTopLeft(api));
+    return () => cancelAnimationFrame(raf);
+  }, [initialized, nodeCount, api]);
   return null;
 }
 
@@ -68,13 +73,21 @@ export function ConfigDiagram({
   nodes: DiagramNode[];
   edges: DiagramEdge[];
 }) {
+  // onInit is React Flow's documented "instance ready" hook: pane measured,
+  // initial nodes rendered. The primary, reliable fit happens here.
+  const onInit = useCallback((instance: ReactFlowInstance<DiagramNode, DiagramEdge>) => {
+    void fitTopLeft(instance);
+  }, []);
+
   return (
     <div className="diagram-canvas relative h-full w-full bg-[var(--diagram-paper)]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        defaultViewport={{ x: FIT_MARGIN, y: FIT_MARGIN, zoom: 1 }}
+        onInit={onInit}
+        fitView
+        fitViewOptions={{ padding: 0.05, maxZoom: 1.1 }}
         minZoom={0.15}
         className="diagram-flow"
         nodesDraggable={false}
@@ -116,7 +129,7 @@ export function ConfigDiagram({
           className="!border-[var(--diagram-stroke)] !bg-[var(--diagram-paper)] !fill-[var(--diagram-ink)]"
           showInteractive={false}
         />
-        <FitOnReady nodeCount={nodes.length} />
+        <RefitOnChange nodeCount={nodes.length} />
       </ReactFlow>
     </div>
   );
