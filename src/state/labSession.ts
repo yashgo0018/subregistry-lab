@@ -164,9 +164,10 @@ export function labReducer(state: LabState, action: LabAction): LabState {
         return { ...s, sequences };
       });
     case "reset-setup":
-      // Fresh reconfiguration: forget the previous run's steps and the
-      // deployed registry/registrar. The resolver choice is per-account and
-      // survives; linkLocked refers to the parent name, not the registry.
+      // Fresh reconfiguration: forget the previous run's steps, the deployed
+      // registry/registrar, and any custom role bitmap (the new preset's
+      // default applies). The resolver choice is per-account and survives;
+      // linkLocked refers to the parent name, not the registry.
       return withActive(state, (s) => {
         const sequences = { ...s.sequences };
         delete sequences["setup"];
@@ -175,6 +176,7 @@ export function labReducer(state: LabState, action: LabAction): LabState {
           sequences,
           addresses: { resolver: s.addresses.resolver },
           registryDeployBlock: undefined,
+          subnameRoleBitmap: undefined,
           locked: { ...s.locked, registryLocked: undefined },
         };
       });

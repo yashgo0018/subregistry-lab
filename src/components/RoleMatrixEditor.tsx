@@ -52,24 +52,40 @@ export function RoleMatrixEditor({
                 {role.subnameLabel ?? role.label}
                 {role.subnameDetail && <InfoTip text={role.subnameDetail} />}
               </td>
-              <td className="py-2 text-center">
-                <input
-                  type="checkbox"
-                  disabled={disabled}
-                  checked={(bitmap & role.bit) !== 0n}
-                  onChange={() => toggle(role.bit)}
-                />
-              </td>
-              <td className="py-2 text-center">
-                {!role.adminOnly && (
-                  <input
-                    type="checkbox"
-                    disabled={disabled}
-                    checked={(bitmap & adminOf(role.bit)) !== 0n}
-                    onChange={() => toggle(adminOf(role.bit))}
-                  />
-                )}
-              </td>
+              {role.adminOnly ? (
+                // Admin-only role: ONE bit grants both the capability and its
+                // delegation, so the checkbox spans both columns.
+                <td colSpan={2} className="py-2 text-center">
+                  <label className="inline-flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      disabled={disabled}
+                      checked={(bitmap & role.bit) !== 0n}
+                      onChange={() => toggle(role.bit)}
+                    />
+                    <span className="text-xs opacity-60">includes delegation</span>
+                  </label>
+                </td>
+              ) : (
+                <>
+                  <td className="py-2 text-center">
+                    <input
+                      type="checkbox"
+                      disabled={disabled}
+                      checked={(bitmap & role.bit) !== 0n}
+                      onChange={() => toggle(role.bit)}
+                    />
+                  </td>
+                  <td className="py-2 text-center">
+                    <input
+                      type="checkbox"
+                      disabled={disabled}
+                      checked={(bitmap & adminOf(role.bit)) !== 0n}
+                      onChange={() => toggle(adminOf(role.bit))}
+                    />
+                  </td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
