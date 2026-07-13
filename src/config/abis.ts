@@ -245,6 +245,16 @@ export const registryAbi = [
       { name: "sender", type: "address", indexed: true },
     ],
   },
+  {
+    name: "EACRolesChanged",
+    type: "event",
+    inputs: [
+      { name: "resource", type: "uint256", indexed: true },
+      { name: "account", type: "address", indexed: true },
+      { name: "oldRoleBitmap", type: "uint256", indexed: false },
+      { name: "newRoleBitmap", type: "uint256", indexed: false },
+    ],
+  },
 ] as const;
 
 /** UserRegistry proxy initializer (encoded into VerifiableFactory.deployProxy data). */

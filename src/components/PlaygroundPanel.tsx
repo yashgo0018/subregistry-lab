@@ -22,6 +22,7 @@ import {
   type StepCtx,
 } from "../lib/steps";
 import { useNameStatus } from "../hooks/useNameStatus";
+import { useRegistrarDiscovery } from "../hooks/useRegistrarDiscovery";
 import { useRegistryState } from "../hooks/useRegistryState";
 import { useTxSequence } from "../hooks/useTxSequence";
 import { useUsdc } from "../hooks/useUsdc";
@@ -41,11 +42,19 @@ export function PlaygroundPanel() {
   const { session } = useLab();
   const nameStatus = useNameStatus(session?.parentLabel, address);
   const registry = session?.addresses.userRegistry;
-  const registrar = session?.addresses.registrar;
   const resolver = session?.addresses.resolver;
   const fromBlock = session?.registryDeployBlock
     ? BigInt(session.registryDeployBlock)
     : undefined;
+  // On-chain truth for the registrar: the session address if known, else
+  // discovered from the registry's role grants (session memory can be lost
+  // on reconfiguration while the registrar keeps its on-chain roles).
+  const discoveredRegistrar = useRegistrarDiscovery(
+    registry,
+    fromBlock,
+    Boolean(session?.addresses.registrar),
+  );
+  const registrar = session?.addresses.registrar ?? discoveredRegistrar;
   const { subnames, loading, refresh } = useRegistryState(registry, fromBlock);
   const usdc = useUsdc(address, registrar);
 
