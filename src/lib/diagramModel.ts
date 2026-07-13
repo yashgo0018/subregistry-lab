@@ -48,19 +48,19 @@ export function toDiagram(setup: SetupView): DiagramState {
     data: { label: ".eth registry", variant: "blue" },
   });
 
-  // parent name
+  // parent name: indented right of the root so the elbow edge's left swing
+  // (~20px before the left handle) stays inside the canvas
   nodes.push({
     id: "parent",
     type: "action",
-    position: { x: COL.left, y: ROW.main },
+    position: { x: COL.left + 48, y: ROW.main },
     data: { label: setup.parentName, variant: "blue" },
   });
   edges.push({
     id: "e-eth-parent",
     source: "eth-registry",
     target: "parent",
-    // straight vertical drop; a left-side entry would swing past the pane edge
-    targetHandle: "top",
+    targetHandle: "left",
   });
 
   if (setup.userRegistry) {

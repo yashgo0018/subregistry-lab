@@ -13,7 +13,6 @@ import {
   getNodesBounds,
   useNodesInitialized,
   useReactFlow,
-  useStore,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -23,42 +22,38 @@ import type { DiagramEdge, DiagramNode } from "./types";
 /** Margin between the pane edge and the content, in screen pixels. */
 const FIT_MARGIN = 24;
 
-/** Back off from the exact fit (~two clicks of the minus control). */
-const ZOOM_FACTOR = 0.7;
-
 /**
- * Anchor the diagram to the TOP-LEFT corner (document-style) instead of
- * fitView's centering, which parks small content mid-pane with a large gap
- * above. Runs once nodes report measured dimensions and again whenever the
- * node set changes (e.g. subnames load in).
+ * Fit the whole configuration into view, anchored TOP-LEFT (document-style)
+ * instead of fitView's centering. fitView does the robust zoom computation
+ * (pane measurement included); we then re-anchor its result so the content's
+ * top-left corner sits at the margin. Runs once nodes report measured
+ * dimensions and again whenever the node set changes (subnames loading in).
  */
 function FitOnReady({ nodeCount }: { nodeCount: number }) {
   const initialized = useNodesInitialized();
-  const { getNodes, setViewport } = useReactFlow();
-  const paneWidth = useStore((s) => s.width);
-  const paneHeight = useStore((s) => s.height);
+  const { fitView, getNodes, getViewport, setViewport } = useReactFlow();
 
   useEffect(() => {
-    if (!initialized || paneWidth === 0 || paneHeight === 0) return;
+    if (!initialized) return;
+    let cancelled = false;
     // next frame: dimensions are committed by then
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
+      if (cancelled) return;
+      await fitView({ padding: 0.05, maxZoom: 1.1 });
+      if (cancelled) return;
       const bounds = getNodesBounds(getNodes());
       if (bounds.width === 0 || bounds.height === 0) return;
-      const zoom = Math.max(
-        Math.min(
-          (paneWidth - 2 * FIT_MARGIN) / bounds.width,
-          (paneHeight - 2 * FIT_MARGIN) / bounds.height,
-          1.5,
-        ) * ZOOM_FACTOR,
-        0.15,
-      );
+      const { zoom } = getViewport();
       void setViewport({
         x: FIT_MARGIN - bounds.x * zoom,
         y: FIT_MARGIN - bounds.y * zoom,
         zoom,
       });
     });
-  }, [initialized, nodeCount, paneWidth, paneHeight, getNodes, setViewport]);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialized, nodeCount, fitView, getNodes, getViewport, setViewport]);
   return null;
 }
 
