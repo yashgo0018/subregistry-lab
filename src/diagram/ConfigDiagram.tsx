@@ -28,7 +28,8 @@ export function ConfigDiagram({
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
+        fitViewOptions={{ padding: 0.1 }}
+        minZoom={0.15}
         className="diagram-flow"
         nodesDraggable={false}
         nodesConnectable={false}

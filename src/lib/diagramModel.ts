@@ -30,11 +30,11 @@ function displayAddr(value?: string): string {
   return value;
 }
 
-// Deterministic grid: generous spacing so ovals/diamonds and edge labels
-// never collide at default zoom.
+// Deterministic grid: enough spacing that frames and edge labels never
+// collide, but compact enough that fitView can hold multi-subname setups.
 const COL = { left: 0, mid: 400, right: 780 };
-const ROW = { top: 0, main: 190, subStart: 360 };
-const SUB_STEP = 100;
+const ROW = { top: 0, main: 175, subStart: 300 };
+const SUB_STEP = 60;
 
 export function toDiagram(setup: SetupView): DiagramState {
   const nodes: DiagramNode[] = [];
