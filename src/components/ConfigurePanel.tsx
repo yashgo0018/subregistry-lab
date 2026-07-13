@@ -8,6 +8,7 @@ import { formatUnits, parseUnits } from "viem";
 import { getPreset } from "../lib/presets";
 import { useLab } from "../state/LabContext";
 import { PresetPicker } from "./PresetPicker";
+import { ResolverPicker } from "./ResolverPicker";
 import { RoleMatrixEditor } from "./RoleMatrixEditor";
 
 export function ConfigurePanel({ onDone }: { onDone: () => void }) {
@@ -27,16 +28,7 @@ export function ConfigurePanel({ onDone }: { onDone: () => void }) {
 
       {preset && (
         <>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={session.deployResolver}
-              onChange={(e) =>
-                dispatch({ type: "set-deploy-resolver", value: e.target.checked })
-              }
-            />
-            Also deploy a resolver so subnames can hold address records (recommended)
-          </label>
+          <ResolverPicker />
 
           {preset.registrar && session.registrarParams && (
             <fieldset className="flex flex-wrap items-end gap-4 rounded-lg border border-neutral-200 p-4">

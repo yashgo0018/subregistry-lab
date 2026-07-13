@@ -61,7 +61,9 @@ export function ReviewPanel({ onComplete }: { onComplete: () => void }) {
       userRegistry: session.addresses.userRegistry ?? "new",
       registrar: preset.registrar ? (session.addresses.registrar ?? "new") : undefined,
       registrarRoles: preset.registrar?.grantBitmap,
-      resolver: session.deployResolver ? (session.addresses.resolver ?? "new") : undefined,
+      resolver: session.deployResolver
+        ? (session.addresses.resolver ?? "new")
+        : session.addresses.resolver, // reused per-account resolver (or none)
     });
   }, [session, preset, address]);
 
