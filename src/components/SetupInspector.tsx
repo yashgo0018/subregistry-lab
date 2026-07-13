@@ -107,7 +107,13 @@ export function SetupInspector({
             </button>
             <button
               type="button"
-              onClick={() => onModeChosen("replace")}
+              onClick={() => {
+                // A replace is a fresh run: drop the previous setup's step
+                // states and deployed addresses, or the runner would replay
+                // the old run's "done" steps without sending anything.
+                dispatch({ type: "reset-setup" });
+                onModeChosen("replace");
+              }}
               className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-700"
             >
               Replace with a new setup →

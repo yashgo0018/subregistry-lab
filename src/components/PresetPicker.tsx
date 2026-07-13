@@ -7,6 +7,11 @@ export function PresetPicker({ disabled }: { disabled?: boolean }) {
   const { session, dispatch } = useLab();
 
   const choose = (presetId: PresetId) => {
+    // Switching preset invalidates a previous run's steps/addresses; the
+    // idempotence guard re-skips anything genuinely already on-chain.
+    if (session?.presetId && session.presetId !== presetId) {
+      dispatch({ type: "reset-setup" });
+    }
     dispatch({ type: "set-preset", presetId });
     const preset = PRESETS.find((p) => p.id === presetId)!;
     dispatch({

@@ -84,7 +84,11 @@ export default function LabPage() {
 
         {showReview && (
           <Section step={5} title="Review and execute" enabled={ready}>
-            <ReviewPanel onComplete={() => setSetupComplete(true)} />
+            {/* keyed by preset: switching presets remounts and drops in-memory step state */}
+            <ReviewPanel
+              key={session?.presetId}
+              onComplete={() => setSetupComplete(true)}
+            />
           </Section>
         )}
 

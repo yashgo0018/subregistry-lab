@@ -84,6 +84,7 @@ export type LabAction =
   | { type: "set-registry-deploy-block"; block: bigint }
   | { type: "step-state"; sequenceId: string; stepId: string; state: StepState }
   | { type: "reset-sequence"; sequenceId: string }
+  | { type: "reset-setup" }
   | { type: "set-locked"; patch: Partial<SessionData["locked"]> }
   | { type: "reset-session" }
   | { type: "deselect" };
@@ -161,6 +162,21 @@ export function labReducer(state: LabState, action: LabAction): LabState {
         const sequences = { ...s.sequences };
         delete sequences[action.sequenceId];
         return { ...s, sequences };
+      });
+    case "reset-setup":
+      // Fresh reconfiguration: forget the previous run's steps and the
+      // deployed registry/registrar. The resolver choice is per-account and
+      // survives; linkLocked refers to the parent name, not the registry.
+      return withActive(state, (s) => {
+        const sequences = { ...s.sequences };
+        delete sequences["setup"];
+        return {
+          ...s,
+          sequences,
+          addresses: { resolver: s.addresses.resolver },
+          registryDeployBlock: undefined,
+          locked: { ...s.locked, registryLocked: undefined },
+        };
       });
     case "set-locked":
       return withActive(state, (s) => ({ ...s, locked: { ...s.locked, ...action.patch } }));
