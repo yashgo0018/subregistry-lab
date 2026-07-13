@@ -230,12 +230,18 @@ export function toDiagram(setup: SetupView): DiagramState {
           }
         }
       }
+      // Several subnames can share one foreign resolver; labeling every
+      // converging edge piles "records" labels on top of each other, so only
+      // the first edge into each node carries it.
+      const alreadyLabeled = edges.some(
+        (e) => e.target === nodeId && e.label === "records",
+      );
       edges.push({
         id: `e-${id}-resolver`,
         source: id,
         target: nodeId,
         targetHandle: "left",
-        label: "records",
+        label: alreadyLabeled ? undefined : "records",
       });
     }
   });

@@ -202,6 +202,8 @@ describe("toDiagram foreign resolvers", () => {
     expect(foreignNodes).toHaveLength(1);
     const incoming = d.edges.filter((e) => e.target === foreignNodes[0].id);
     expect(incoming.map((e) => e.source).sort()).toEqual(["sub-bob", "sub-carol"]);
+    // converging edges carry the "records" label only once
+    expect(incoming.filter((e) => e.label === "records")).toHaveLength(1);
   });
 
   it("caps dedicated nodes and aggregates the distinct overflow", () => {
