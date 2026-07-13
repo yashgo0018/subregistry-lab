@@ -56,9 +56,14 @@ function displayAddr(value?: string): string {
 
 // Deterministic grid: enough spacing that frames and edge labels never
 // collide, but compact enough that fitView can hold multi-subname setups.
-const COL = { left: 0, mid: 400, right: 780 };
+// farRight clears even long subname labels (sub nodes start at mid+180 and
+// grow with the name), so foreign resolver boxes never sit on top of them.
+const COL = { left: 0, mid: 400, right: 780, farRight: 1060 };
 const ROW = { top: 0, main: 175, subStart: 300 };
 const SUB_STEP = 60;
+// Resolver boxes are taller than a subname row: stack them at least this far
+// apart so adjacent foreign resolvers can't overlap each other.
+const FOREIGN_STEP = 120;
 
 export function toDiagram(setup: SetupView): DiagramState {
   const nodes: DiagramNode[] = [];
@@ -162,10 +167,18 @@ export function toDiagram(setup: SetupView): DiagramState {
     }
   }
 
-  // Foreign resolvers: one node per distinct address (capped), each aligned
-  // with the row of the first subname that uses it. Overflow shares a node.
+  // Foreign resolvers: one node per distinct address (capped), in their own
+  // column right of the subnames. Each aligns with the row of the first
+  // subname that uses it where possible, but never closer than FOREIGN_STEP
+  // to the previous one. Overflow shares a node.
   const foreignNodes = new Map<string, string>(); // lowercased addr -> node id
   const overflowAddrs = new Set<string>();
+  let nextForeignY = ROW.subStart;
+  const placeForeignY = (i: number): number => {
+    const y = Math.max(ROW.subStart + SUB_STEP * i, nextForeignY);
+    nextForeignY = y + FOREIGN_STEP;
+    return y;
+  };
 
   subs.forEach((sub, i) => {
     const id = `sub-${sub.label}`;
@@ -200,7 +213,7 @@ export function toDiagram(setup: SetupView): DiagramState {
           nodes.push({
             id: nodeId,
             type: "resolver",
-            position: { x: COL.right, y: ROW.subStart + SUB_STEP * i },
+            position: { x: COL.farRight, y: placeForeignY(i) },
             data: { label: "Resolver", addr: displayAddr(sub.resolver), foreign: true },
           });
         } else {
@@ -211,10 +224,7 @@ export function toDiagram(setup: SetupView): DiagramState {
             nodes.push({
               id: nodeId,
               type: "resolver",
-              position: {
-                x: COL.right,
-                y: ROW.subStart + SUB_STEP * i,
-              },
+              position: { x: COL.farRight, y: placeForeignY(i) },
               data: { label: "More resolvers", addr: "", foreign: true },
             });
           }

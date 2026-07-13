@@ -222,6 +222,28 @@ describe("toDiagram foreign resolvers", () => {
     expect(d.edges.filter((e) => e.target === "resolver-more")).toHaveLength(3);
   });
 
+  it("foreign resolver nodes sit right of the subnames and never stack", () => {
+    const d = toDiagram({
+      ...BASE,
+      subnames: [
+        // three adjacent rows, each with a distinct foreign resolver: boxes
+        // are taller than a subname row, so naive row alignment would overlap
+        { label: "a", resolver: "0x1111111111111111111111111111111111111111" },
+        { label: "b", resolver: "0x2222222222222222222222222222222222222223" },
+        { label: "c", resolver: "0x4444444444444444444444444444444444444444" },
+      ],
+    });
+    const subXs = d.nodes.filter((n) => n.id.startsWith("sub-")).map((n) => n.position.x);
+    const foreign = d.nodes.filter((n) => n.id.startsWith("resolver-0x"));
+    for (const f of foreign) {
+      expect(f.position.x).toBeGreaterThan(Math.max(...subXs) + 200);
+    }
+    const ys = foreign.map((f) => f.position.y).sort((a, b) => a - b);
+    for (let i = 1; i < ys.length; i++) {
+      expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(100);
+    }
+  });
+
   it("no foreign machinery when everyone uses the shared resolver", () => {
     const d = toDiagram({
       ...BASE,
