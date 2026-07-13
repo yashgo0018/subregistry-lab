@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { ChainGuard, useIsReady } from "../components/ChainGuard";
+import { EnsMarkLogo } from "../components/EnsMarkLogo";
 import { ConfigurePanel } from "../components/ConfigurePanel";
 import { LockPanel } from "../components/LockPanel";
 import { NamePicker } from "../components/NamePicker";
@@ -36,7 +37,10 @@ export default function LabPage() {
     <div className="mx-auto flex min-h-screen max-w-[58rem] flex-col gap-6 px-6 py-10">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">ENSv2 Subregistry Lab</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <EnsMarkLogo size={28} />
+            ENSv2 Subregistry Lab
+          </h1>
           <p className="text-sm opacity-70">
             Deploy and configure subname registries for your .eth names on Sepolia. No code
             required.

@@ -1,7 +1,25 @@
-/* ABC Monument Grotesk font family */
-@import url('https://fonts.cdnfonts.com/css/abc-monument-grotesk');
-
-/* ENS diagram fonts (woff2 copied from the ENS Fonts bundle via ens-diagrams) */
+/* ENS fonts (woff2 from the ENS Fonts bundle, same set explorer.ens.dev uses) */
+@font-face {
+  font-family: "ABC Monument Grotesk";
+  src: url("/fonts/ABCMonumentGroteskVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ABC Monument Grotesk Mono";
+  src: url("/fonts/ABCMonumentGroteskMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "ABC Monument Grotesk Mono";
+  src: url("/fonts/ABCMonumentGroteskMono-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 @font-face {
   font-family: "ABC Marist";
   src: url("/fonts/ABCMarist-Book.woff2") format("woff2");
@@ -32,6 +50,10 @@
  * amber = warnings. Cards: #faf9f7 on #e1e1e0 borders, 10-16px radii.
  */
 @theme {
+  /* Explorer font stacks: font-sans / font-mono utilities use the ENS faces */
+  --font-sans: "ABC Monument Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "ABC Monument Grotesk Mono", ui-monospace, monospace;
+
   --color-ens-card: #faf9f7;
   --color-ens-border: #e1e1e0;
   --color-ens-fg: #191919;
