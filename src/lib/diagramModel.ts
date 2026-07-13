@@ -13,13 +13,37 @@ export type SetupView = {
   /** Real address, or a short placeholder like "new" for planned contracts. */
   userRegistry?: string;
   registrar?: string;
+  /** The setup's shared/default resolver. */
   resolver?: string;
   /** Roles the registrar holds on the registry root. */
   registrarRoles?: bigint;
   /** True once dangerous root roles were revoked. */
   locked?: boolean;
-  subnames?: { label: string; neverExpires?: boolean }[];
+  subnames?: {
+    label: string;
+    neverExpires?: boolean;
+    /** The subname's own resolver pointer (undefined/zero = none). */
+    resolver?: string;
+  }[];
 };
+
+const ZERO = "0x0000000000000000000000000000000000000000";
+
+export type ResolverKind = "default" | "foreign" | "none";
+
+/** Classify a subname's resolver relative to the setup's shared resolver. */
+export function classifyResolver(
+  subResolver?: string,
+  defaultResolver?: string,
+): ResolverKind {
+  const res = subResolver?.toLowerCase();
+  if (!res || res === ZERO) return "none";
+  if (defaultResolver && res === defaultResolver.toLowerCase()) return "default";
+  return "foreign";
+}
+
+/** Distinct foreign resolvers get their own node, capped to keep layouts sane. */
+export const MAX_FOREIGN_RESOLVER_NODES = 4;
 
 /** Real addresses render shortened; anything else (e.g. "new") renders as-is. */
 function displayAddr(value?: string): string {
@@ -104,6 +128,11 @@ export function toDiagram(setup: SetupView): DiagramState {
     });
   }
 
+  // Classify subnames first: deviations relabel the aggregate records edge.
+  const subs = setup.subnames ?? [];
+  const kinds = subs.map((sub) => classifyResolver(sub.resolver, setup.resolver));
+  const hasForeign = kinds.includes("foreign");
+
   if (setup.resolver) {
     nodes.push({
       id: "resolver",
@@ -116,20 +145,28 @@ export function toDiagram(setup: SetupView): DiagramState {
       },
     });
     if (setup.userRegistry) {
-      // Subnames in the registry keep their records here.
+      // Subnames on the shared resolver keep their records here; once any
+      // subname deviates, the aggregate edge only covers the default group.
       edges.push({
         id: "e-registry-resolver",
         source: "user-registry",
         sourceHandle: "right",
         target: "resolver",
         targetHandle: "left",
-        label: "records",
+        label: hasForeign ? "default records" : "records",
       });
     }
   }
 
-  (setup.subnames ?? []).forEach((sub, i) => {
+  // Foreign resolvers: one node per distinct address (capped), each aligned
+  // with the row of the first subname that uses it. Overflow shares a node.
+  const foreignNodes = new Map<string, string>(); // lowercased addr -> node id
+  const overflowAddrs = new Set<string>();
+
+  subs.forEach((sub, i) => {
     const id = `sub-${sub.label}`;
+    const kind = kinds[i];
+    const marker = sub.neverExpires ? " ∞" : kind === "none" ? " ∅" : "";
     nodes.push({
       id,
       type: "action",
@@ -137,7 +174,7 @@ export function toDiagram(setup: SetupView): DiagramState {
       // into the left handle without S-bends.
       position: { x: COL.mid + 180, y: ROW.subStart + SUB_STEP * i },
       data: {
-        label: `${sub.label}.${setup.parentName}${sub.neverExpires ? " ∞" : ""}`,
+        label: `${sub.label}.${setup.parentName}${marker}`,
         variant: "blue",
       },
     });
@@ -148,7 +185,53 @@ export function toDiagram(setup: SetupView): DiagramState {
       target: id,
       targetHandle: "left",
     });
+
+    if (kind === "foreign") {
+      const addr = sub.resolver!.toLowerCase();
+      let nodeId = foreignNodes.get(addr);
+      if (!nodeId) {
+        if (foreignNodes.size < MAX_FOREIGN_RESOLVER_NODES) {
+          nodeId = `resolver-${addr}`;
+          foreignNodes.set(addr, nodeId);
+          nodes.push({
+            id: nodeId,
+            type: "resolver",
+            position: { x: COL.right, y: ROW.subStart + SUB_STEP * i },
+            data: { label: "Resolver", addr: displayAddr(sub.resolver), foreign: true },
+          });
+        } else {
+          // beyond the cap: distinct addresses share one aggregate node
+          nodeId = "resolver-more";
+          overflowAddrs.add(addr);
+          if (!nodes.some((n) => n.id === nodeId)) {
+            nodes.push({
+              id: nodeId,
+              type: "resolver",
+              position: {
+                x: COL.right,
+                y: ROW.subStart + SUB_STEP * i,
+              },
+              data: { label: "More resolvers", addr: "", foreign: true },
+            });
+          }
+        }
+      }
+      edges.push({
+        id: `e-${id}-resolver`,
+        source: id,
+        target: nodeId,
+        targetHandle: "left",
+        label: "records",
+      });
+    }
   });
+
+  if (overflowAddrs.size > 0) {
+    const moreNode = nodes.find((n) => n.id === "resolver-more");
+    if (moreNode) {
+      (moreNode.data as { label: string }).label = `+${overflowAddrs.size} more`;
+    }
+  }
 
   return { nodes, edges };
 }

@@ -34,11 +34,12 @@ export type GroupNodeData = {
   label: string;
 };
 
-/** Resolver node: brown, owner + addr (60) — Figma diagram */
+/** Resolver node: dark stack with sockets; foreign = light, socket-less ("not yours"). */
 export type ResolverNodeData = {
   label: string;   // e.g. "Resolver 1"
   owner?: string; // e.g. "0x5678..."
   addr?: string;  // e.g. "0x5678..." for addr (60)
+  foreign?: boolean;
 };
 
 export type DiagramNode =

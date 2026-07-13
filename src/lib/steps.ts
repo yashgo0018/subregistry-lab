@@ -76,6 +76,8 @@ export type StepCtx = {
   userRegistry?: Address;
   resolver?: Address;
   registrar?: Address;
+  /** A subname's OWN resolver (switch flow); deliberately not persisted to the session. */
+  subResolver?: Address;
 };
 
 export type StepDef = {
@@ -492,6 +494,84 @@ export function buildRelinkStep(params: {
         return {
           ok,
           detail: ok ? `${params.parentLabel}.eth now points at ${linked}` : `Link is ${linked}`,
+        };
+      },
+    },
+  ];
+}
+
+/**
+ * A subname owner leaves the shared resolver: deploy their own
+ * PermissionedResolver proxy, then point the subname at it.
+ */
+export function buildSwitchResolverSteps(params: {
+  userRegistry: Address;
+  parentLabel: string;
+  label: string;
+  /** Subname owner: becomes the new resolver's admin. */
+  owner: Address;
+}): StepDef[] {
+  const fqdnStr = `${params.label}.${params.parentLabel}.eth`;
+  return [
+    {
+      id: "deploy-sub-resolver",
+      title: `Deploy an own resolver for ${fqdnStr}`,
+      explain: "Creates a fresh resolver administered by the subname's owner.",
+      build: () => ({
+        type: "write",
+        address: deployments.VerifiableFactory,
+        abi: verifiableFactoryAbi as unknown as Abi,
+        functionName: "deployProxy",
+        args: [
+          deployments.PermissionedResolverImpl,
+          deriveSalt(`${fqdnStr}-own-resolver`),
+          encodeFunctionData({
+            abi: resolverInitAbi,
+            functionName: "initialize",
+            args: [params.owner, ALL_ROLES],
+          }),
+        ],
+      }),
+      onReceipt: (receipt) => ({ subResolver: parseProxyAddress(receipt) }),
+      verify: async (read, ctx) => {
+        if (!ctx.subResolver) return { ok: false, detail: "No resolver address captured" };
+        const ok = (await read({
+          address: ctx.subResolver,
+          abi: registryAbi as unknown as Abi,
+          functionName: "hasRootRoles",
+          args: [ALL_ROLES, params.owner],
+        })) as boolean;
+        return {
+          ok,
+          detail: ok
+            ? `Resolver live at ${ctx.subResolver}; owner holds all roles`
+            : "Resolver deployed but owner roles are missing",
+        };
+      },
+    },
+    {
+      id: "set-sub-resolver",
+      title: `Point ${fqdnStr} at it`,
+      explain:
+        "The subname's records move to its own resolver; the shared resolver no longer serves it.",
+      build: (ctx) => ({
+        type: "write",
+        address: params.userRegistry,
+        abi: registryAbi as unknown as Abi,
+        functionName: "setResolver",
+        args: [labelhashId(params.label), ctx.subResolver],
+      }),
+      verify: async (read, ctx) => {
+        const linked = (await read({
+          address: params.userRegistry,
+          abi: registryAbi as unknown as Abi,
+          functionName: "getResolver",
+          args: [params.label],
+        })) as Address;
+        const ok = linked.toLowerCase() === (ctx.subResolver ?? "").toLowerCase();
+        return {
+          ok,
+          detail: ok ? `${fqdnStr} now resolves via ${linked}` : `Resolver is ${linked}`,
         };
       },
     },

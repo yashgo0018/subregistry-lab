@@ -15,17 +15,23 @@ const handleClass =
   "!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-stroke)]";
 
 function ResolverNode({ data, selected }: NodeProps<ResolverNodeType>) {
+  const foreign = Boolean(data.foreign);
   return (
     <div
       className={`
         diagram-resolver diagram-node-dotted relative min-w-[150px] border-[1.5px] px-4 py-3
-        border-[var(--diagram-stroke)] bg-[var(--diagram-resolver-fill)]
-        text-[var(--diagram-resolver-label)]
+        border-[var(--diagram-stroke)]
+        ${
+          foreign
+            ? "bg-[var(--diagram-paper)] text-[var(--diagram-ink)]"
+            : "bg-[var(--diagram-resolver-fill)] text-[var(--diagram-resolver-label)]"
+        }
         ${selected ? "ring-2 ring-[var(--diagram-stroke)] ring-offset-2 ring-offset-[var(--diagram-paper)]" : ""}
       `}
       style={{ borderRadius: "var(--diagram-node-radius)" }}
     >
-      <CornerMarkers />
+      {/* sockets mark YOUR resolver; foreign ones render without */}
+      {!foreign && <CornerMarkers />}
       <Handle id="top" type="target" position={Position.Top} className={handleClass} />
       <Handle id="left" type="target" position={Position.Left} className={handleClass} />
       <div className="diagram-semimono font-medium text-[var(--diagram-font-main)] leading-tight">

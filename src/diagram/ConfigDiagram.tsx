@@ -4,7 +4,7 @@
  * "protocol" mode (lapis graph paper, 8px minor / 80px major grid).
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -69,9 +69,12 @@ const GRID_MAJOR = "rgba(0, 130, 187, 0.32)";
 export function ConfigDiagram({
   nodes,
   edges,
+  onNodeClick,
 }: {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
+  /** Optional: clicking a node (e.g. a resolver) opens a detail panel upstream. */
+  onNodeClick?: (node: DiagramNode) => void;
 }) {
   // onInit is React Flow's documented "instance ready" hook: pane measured,
   // initial nodes rendered. The primary, reliable fit happens here.
@@ -79,12 +82,36 @@ export function ConfigDiagram({
     void fitTopLeft(instance);
   }, []);
 
+  // Hovering a node highlights its incident edges and dims the rest.
+  const [hovered, setHovered] = useState<string | null>(null);
+  const { displayNodes, displayEdges } = useMemo(() => {
+    if (!hovered) return { displayNodes: nodes, displayEdges: edges };
+    const neighbors = new Set([hovered]);
+    for (const e of edges) {
+      if (e.source === hovered) neighbors.add(e.target);
+      if (e.target === hovered) neighbors.add(e.source);
+    }
+    return {
+      displayNodes: nodes.map((n) =>
+        neighbors.has(n.id) ? n : { ...n, style: { ...n.style, opacity: 0.35 } },
+      ) as DiagramNode[],
+      displayEdges: edges.map((e) =>
+        e.source === hovered || e.target === hovered
+          ? { ...e, style: { ...e.style, strokeWidth: 2.5 } }
+          : { ...e, style: { ...e.style, opacity: 0.25 } },
+      ),
+    };
+  }, [nodes, edges, hovered]);
+
   return (
     <div className="diagram-canvas relative h-full w-full bg-[var(--diagram-paper)]">
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={displayEdges}
         nodeTypes={nodeTypes}
+        onNodeMouseEnter={(_, node) => setHovered(node.id)}
+        onNodeMouseLeave={() => setHovered(null)}
+        onNodeClick={onNodeClick ? (_, node) => onNodeClick(node as DiagramNode) : undefined}
         onInit={onInit}
         fitView
         fitViewOptions={{ padding: 0.05, maxZoom: 1.1 }}

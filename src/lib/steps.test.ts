@@ -7,9 +7,11 @@ import {
   buildRegistrarRegisterSteps,
   buildRevokeRegistryRolesStep,
   buildSetupSteps,
+  buildSwitchResolverSteps,
   type StepCtx,
 } from "./steps";
-import { ROLE_SET_SUBREGISTRY, adminOf } from "./roles";
+import { ALL_ROLES, ROLE_SET_SUBREGISTRY, adminOf } from "./roles";
+import { labelhashId } from "./names";
 import { deployments } from "../config/deployments";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
@@ -176,5 +178,71 @@ describe("action builders", () => {
     const [step] = buildRevokeRegistryRolesStep({ userRegistry: REGISTRY, account: ACCOUNT });
     expect((await step.verify!(async () => false, {} as StepCtx)).ok).toBe(true);
     expect((await step.verify!(async () => true, {} as StepCtx)).ok).toBe(false);
+  });
+});
+
+describe("buildSwitchResolverSteps", () => {
+  const SUB_RESOLVER = "0x5555555555555555555555555555555555555555" as Address;
+  const params = {
+    userRegistry: REGISTRY,
+    parentLabel: "nick",
+    label: "alice",
+    owner: ACCOUNT,
+  };
+
+  it("deploys a resolver for the subname owner, then points the subname at it", () => {
+    expect(buildSwitchResolverSteps(params).map((s) => s.id)).toEqual([
+      "deploy-sub-resolver",
+      "set-sub-resolver",
+    ]);
+  });
+
+  it("deploy targets the factory with the resolver impl and a fresh salt per build", () => {
+    const [deploy] = buildSwitchResolverSteps(params);
+    const a = deploy.build({} as StepCtx);
+    const b = buildSwitchResolverSteps(params)[0].build({} as StepCtx);
+    if (a.type !== "write" || b.type !== "write") throw new Error("expected writes");
+    expect(a.address).toBe(deployments.VerifiableFactory);
+    expect(a.functionName).toBe("deployProxy");
+    expect(a.args[0]).toBe(deployments.PermissionedResolverImpl);
+    expect(a.args[1]).not.toBe(b.args[1]);
+  });
+
+  it("deploy verify requires the captured address and the owner's root roles", async () => {
+    const [deploy] = buildSwitchResolverSteps(params);
+    const noAddr = await deploy.verify!(async () => true, {} as StepCtx);
+    expect(noAddr.ok).toBe(false);
+
+    const ctx = { subResolver: SUB_RESOLVER } as StepCtx;
+    const calls: unknown[] = [];
+    const good = await deploy.verify!(async (req: unknown) => {
+      calls.push(req);
+      return true;
+    }, ctx);
+    expect(good.ok).toBe(true);
+    const req = calls[0] as { address: Address; functionName: string; args: unknown[] };
+    expect(req.address).toBe(SUB_RESOLVER);
+    expect(req.functionName).toBe("hasRootRoles");
+    expect(req.args).toEqual([ALL_ROLES, ACCOUNT]);
+
+    const bad = await deploy.verify!(async () => false, ctx);
+    expect(bad.ok).toBe(false);
+  });
+
+  it("set-sub-resolver writes the deployed address for the label's token id", () => {
+    const [, set] = buildSwitchResolverSteps(params);
+    const action = set.build({ subResolver: SUB_RESOLVER } as StepCtx);
+    if (action.type !== "write") throw new Error("expected write");
+    expect(action.address).toBe(REGISTRY);
+    expect(action.functionName).toBe("setResolver");
+    expect(action.args).toEqual([labelhashId("alice"), SUB_RESOLVER]);
+  });
+
+  it("set-sub-resolver verify compares the on-chain pointer case-insensitively", async () => {
+    const [, set] = buildSwitchResolverSteps(params);
+    const ctx = { subResolver: SUB_RESOLVER } as StepCtx;
+    const upper = SUB_RESOLVER.toUpperCase().replace("0X", "0x") as Address;
+    expect((await set.verify!(async () => upper, ctx)).ok).toBe(true);
+    expect((await set.verify!(async () => RESOLVER, ctx)).ok).toBe(false);
   });
 });

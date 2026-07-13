@@ -8,9 +8,10 @@ import { useMemo, useState } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { isAddress, type Abi, type Address } from "viem";
 import { ConfigDiagram } from "../diagram";
+import type { DiagramNode } from "../diagram";
 import { simpleRegistrarAbi } from "../config/abis";
 import { deployments } from "../config/deployments";
-import { toDiagram } from "../lib/diagramModel";
+import { classifyResolver, toDiagram } from "../lib/diagramModel";
 import { classifyError } from "../lib/errors";
 import { fqdn, normalizeLabel, subnameNode } from "../lib/names";
 import { MAX_EXPIRY, getPreset } from "../lib/presets";
@@ -19,11 +20,12 @@ import {
   buildFaucetStep,
   buildRegistrarRegisterSteps,
   buildSetAddrStep,
+  buildSwitchResolverSteps,
   type StepCtx,
 } from "../lib/steps";
 import { useNameStatus } from "../hooks/useNameStatus";
 import { useRegistrarDiscovery } from "../hooks/useRegistrarDiscovery";
-import { useRegistryState } from "../hooks/useRegistryState";
+import { useRegistryState, type Subname } from "../hooks/useRegistryState";
 import { useTxSequence } from "../hooks/useTxSequence";
 import { useUsdc } from "../hooks/useUsdc";
 import { useLab } from "../state/LabContext";
@@ -69,6 +71,7 @@ export function PlaygroundPanel() {
   const [via, setVia] = useState<"direct" | "registrar">("direct");
   const [formError, setFormError] = useState<string>();
   const [resolveResults, setResolveResults] = useState<Record<string, string>>({});
+  const [inspected, setInspected] = useState<DiagramNode | null>(null);
 
   const preset = session?.presetId ? getPreset(session.presetId) : undefined;
   const forever = foreverOverride ?? preset?.subnameDefaults.expiry === "max";
@@ -86,7 +89,11 @@ export function PlaygroundPanel() {
       locked: session.locked.registryLocked,
       subnames: subnames
         .filter((s) => s.registered)
-        .map((s) => ({ label: s.label, neverExpires: s.neverExpires })),
+        .map((s) => ({
+          label: s.label,
+          neverExpires: s.neverExpires,
+          resolver: s.resolver,
+        })),
     });
   }, [session, registry, registrar, resolver, subnames, preset, address, parentName]);
 
@@ -182,6 +189,18 @@ export function PlaygroundPanel() {
     );
   };
 
+  const switchResolverFor = async (subLabel: string) => {
+    if (!registry || !session) return;
+    await runPlan(
+      buildSwitchResolverSteps({
+        userRegistry: registry,
+        parentLabel: session.parentLabel,
+        label: subLabel,
+        owner: address,
+      }),
+    );
+  };
+
   const resolveCheck = async (subLabel: string) => {
     if (!client) return;
     const name = fqdn(subLabel, parentName);
@@ -229,11 +248,29 @@ export function PlaygroundPanel() {
         />
       </div>
 
-      {/* Live diagram from on-chain state */}
+      {/* Live diagram from on-chain state; click a resolver node to inspect it */}
       {liveDiagram && (
         <div className="h-80 overflow-hidden rounded-lg border border-neutral-200">
-          <ConfigDiagram nodes={liveDiagram.nodes} edges={liveDiagram.edges} />
+          <ConfigDiagram
+            nodes={liveDiagram.nodes}
+            edges={liveDiagram.edges}
+            onNodeClick={(node) =>
+              setInspected(node.type === "resolver" ? node : null)
+            }
+          />
         </div>
+      )}
+
+      {/* Resolver inspector (from a diagram click) */}
+      {inspected && (
+        <ResolverInspector
+          node={inspected}
+          sharedResolver={resolver}
+          parentName={parentName}
+          parentResolver={nameStatus.resolver}
+          subnames={subnames}
+          onClose={() => setInspected(null)}
+        />
       )}
 
       {/* Register form */}
@@ -376,7 +413,10 @@ export function PlaygroundPanel() {
                 )}
               </div>
               <div className="flex items-center gap-3 text-sm">
-                {resolver && (
+                {classifyResolver(sub.resolver, resolver) === "foreign" && (
+                  <Badge tone="amber">own resolver</Badge>
+                )}
+                {resolver && classifyResolver(sub.resolver, resolver) === "default" && (
                   <button
                     type="button"
                     onClick={() => setAddrFor(sub.label)}
@@ -386,6 +426,18 @@ export function PlaygroundPanel() {
                     set my address
                   </button>
                 )}
+                {sub.owner.toLowerCase() === address.toLowerCase() &&
+                  classifyResolver(sub.resolver, resolver) !== "foreign" && (
+                    <button
+                      type="button"
+                      onClick={() => switchResolverFor(sub.label)}
+                      disabled={!ready || sequence.status === "running"}
+                      className="underline decoration-dotted underline-offset-2 disabled:opacity-40"
+                      title="Deploy a resolver owned by this subname's owner and point the subname at it"
+                    >
+                      switch to own resolver
+                    </button>
+                  )}
                 <button
                   type="button"
                   onClick={() => resolveCheck(sub.label)}
@@ -430,6 +482,95 @@ export function PlaygroundPanel() {
             session's. Re-run the link step or adopt the on-chain one.
           </p>
         )}
+    </div>
+  );
+}
+
+/** Detail card for a resolver node clicked in the diagram. */
+function ResolverInspector({
+  node,
+  sharedResolver,
+  parentName,
+  parentResolver,
+  subnames,
+  onClose,
+}: {
+  node: DiagramNode;
+  sharedResolver?: Address;
+  parentName: string;
+  parentResolver?: Address;
+  subnames: Subname[];
+  onClose: () => void;
+}) {
+  const isShared = node.id === "resolver";
+  const isOverflow = node.id === "resolver-more";
+  const addr = isShared
+    ? sharedResolver
+    : node.id.startsWith("resolver-0x")
+      ? (node.id.slice("resolver-".length) as Address)
+      : undefined;
+
+  const servedSubnames = addr
+    ? subnames.filter(
+        (s) => s.registered && s.resolver.toLowerCase() === addr.toLowerCase(),
+      )
+    : [];
+  const servesParent =
+    isShared &&
+    Boolean(
+      sharedResolver &&
+        parentResolver &&
+        parentResolver.toLowerCase() === sharedResolver.toLowerCase(),
+    );
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-ens-border bg-ens-card p-4">
+      <div className="flex items-center justify-between">
+        <h4 className="flex items-center gap-2 text-sm font-medium">
+          Resolver {addr && <AddressLink address={addr} />}
+          {isShared ? (
+            <Badge tone="green">yours (shared)</Badge>
+          ) : (
+            <Badge tone="amber">own resolver</Badge>
+          )}
+        </h4>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-sm opacity-60 hover:opacity-100"
+        >
+          ✕ close
+        </button>
+      </div>
+      {isOverflow ? (
+        <p className="text-sm opacity-70">
+          Several subnames use their own distinct resolvers; see the badges in the
+          subname list below.
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="opacity-60">serves:</span>
+          {servesParent && (
+            <NameChip name={parentName} href={explorerName(parentName)} />
+          )}
+          {servedSubnames.map((s) => (
+            <NameChip
+              key={s.label}
+              name={fqdn(s.label, parentName)}
+              href={explorerName(fqdn(s.label, parentName))}
+            />
+          ))}
+          {!servesParent && servedSubnames.length === 0 && (
+            <span className="opacity-60">no names currently</span>
+          )}
+        </div>
+      )}
+      {isShared && (
+        <p className="text-xs opacity-60">
+          You hold this resolver's root roles: you can set records for every name it
+          serves. Subnames that switch to their own resolver leave this control.
+        </p>
+      )}
     </div>
   );
 }

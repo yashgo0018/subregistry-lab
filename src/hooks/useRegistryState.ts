@@ -25,6 +25,8 @@ export type Subname = {
   neverExpires: boolean;
   owner: Address;
   registered: boolean;
+  /** The subname's resolver pointer (zero address = none). */
+  resolver: Address;
 };
 
 const labelRegisteredEvent = (registryAbi as Abi).find(
@@ -72,24 +74,33 @@ export function useRegistryState(registry?: Address, fromBlock?: bigint) {
         ];
         const results: Subname[] = [];
         for (const label of labels) {
-          const state = (await client.readContract({
-            address: registry,
-            abi: registryAbi as Abi,
-            functionName: "getState",
-            args: [labelhashId(label)],
-          })) as {
-            status: number;
-            expiry: bigint;
-            latestOwner: Address;
-            tokenId: bigint;
-            resource: bigint;
-          };
+          const [state, resolver] = await Promise.all([
+            client.readContract({
+              address: registry,
+              abi: registryAbi as Abi,
+              functionName: "getState",
+              args: [labelhashId(label)],
+            }) as Promise<{
+              status: number;
+              expiry: bigint;
+              latestOwner: Address;
+              tokenId: bigint;
+              resource: bigint;
+            }>,
+            client.readContract({
+              address: registry,
+              abi: registryAbi as Abi,
+              functionName: "getResolver",
+              args: [label],
+            }) as Promise<Address>,
+          ]);
           results.push({
             label,
             expiry: state.expiry,
             neverExpires: state.expiry === MAX_EXPIRY,
             owner: state.latestOwner,
             registered: state.status === 2,
+            resolver,
           });
         }
         if (!cancelled) {
