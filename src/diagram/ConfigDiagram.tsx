@@ -66,6 +66,16 @@ function RefitOnChange({ nodeCount }: { nodeCount: number }) {
 const GRID_MINOR = "rgba(0, 130, 187, 0.14)";
 const GRID_MAJOR = "rgba(0, 130, 187, 0.32)";
 
+// Shared with defaultEdgeOptions AND per-edge dimming: edge `style` only
+// affects the path, so dimmed edges must override labelStyle too, and that
+// override replaces the default entirely.
+const EDGE_LABEL_STYLE = {
+  fontFamily: '"ABC Monument Grotesk Semi-Mono", ui-monospace, monospace',
+  fontWeight: 500,
+  fontSize: "var(--diagram-font-sub)",
+  fill: "var(--diagram-ink)",
+};
+
 export function ConfigDiagram({
   nodes,
   edges,
@@ -102,7 +112,11 @@ export function ConfigDiagram({
       displayEdges: edges.map((e) =>
         e.source === hovered || e.target === hovered
           ? { ...e, style: { ...e.style, strokeWidth: 2.5 } }
-          : { ...e, style: { ...e.style, opacity: 0.25 } },
+          : {
+              ...e,
+              style: { ...e.style, opacity: 0.25 },
+              labelStyle: { ...EDGE_LABEL_STYLE, opacity: 0.25 },
+            },
       ),
     };
   }, [nodes, edges, affinities, hovered]);
@@ -134,12 +148,7 @@ export function ConfigDiagram({
           labelBgStyle: { fill: "var(--diagram-paper)" },
           labelBgPadding: [6, 8] as [number, number],
           labelBgBorderRadius: 6,
-          labelStyle: {
-            fontFamily: '"ABC Monument Grotesk Semi-Mono", ui-monospace, monospace',
-            fontWeight: 500,
-            fontSize: "var(--diagram-font-sub)",
-            fill: "var(--diagram-ink)",
-          },
+          labelStyle: EDGE_LABEL_STYLE,
         }}
       >
         <Background
