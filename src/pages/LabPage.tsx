@@ -10,6 +10,7 @@ import { PlaygroundPanel } from "../components/PlaygroundPanel";
 import { ReviewPanel } from "../components/ReviewPanel";
 import { SetupInspector } from "../components/SetupInspector";
 import { Section } from "../components/ui";
+import { useNameStatus } from "../hooks/useNameStatus";
 import { useLab } from "../state/LabContext";
 
 export type SetupMode = "fresh" | "adopt" | "replace";
@@ -19,19 +20,23 @@ export type SetupMode = "fresh" | "adopt" | "replace";
  * connect -> pick name -> inspect -> configure -> review/execute -> playground -> lock.
  */
 export default function LabPage() {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const ready = useIsReady();
   const { session } = useLab();
   const [mode, setMode] = useState<SetupMode>();
   const [configured, setConfigured] = useState(false);
-  const [setupComplete, setSetupComplete] = useState(false);
+  const nameStatus = useNameStatus(session?.parentLabel, address);
 
-  // Adopting an existing registry skips deploy/review entirely.
-  const adopted = mode === "adopt";
   const showConfigure = Boolean(session) && (mode === "fresh" || mode === "replace");
   const showReview = showConfigure && configured;
-  const playgroundReady =
-    Boolean(session?.addresses.userRegistry) && (adopted || setupComplete);
+  // On-chain truth decides: the playground is relevant whenever the name's
+  // live subregistry pointer matches the session's registry. This covers
+  // adopt, completed setups, AND re-links from the history box uniformly.
+  const playgroundReady = Boolean(
+    session?.addresses.userRegistry &&
+      nameStatus.subregistry?.toLowerCase() ===
+        session.addresses.userRegistry.toLowerCase(),
+  );
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[58rem] flex-col gap-6 px-6 py-10">
@@ -71,7 +76,6 @@ export default function LabPage() {
             onModeChosen={(m) => {
               setMode(m);
               setConfigured(false);
-              setSetupComplete(false);
             }}
           />
         </Section>
@@ -85,10 +89,7 @@ export default function LabPage() {
         {showReview && (
           <Section step={5} title="Review and execute" enabled={ready}>
             {/* keyed by preset: switching presets remounts and drops in-memory step state */}
-            <ReviewPanel
-              key={session?.presetId}
-              onComplete={() => setSetupComplete(true)}
-            />
+            <ReviewPanel key={session?.presetId} onComplete={() => nameStatus.refetch()} />
           </Section>
         )}
 
