@@ -97,7 +97,7 @@ export const ROLE_CATALOG: RoleCatalogEntry[] = [
     adminLabel: "Grant/revoke the delete permission",
     subnameLabel: "Delete their subname",
     subnameDetail:
-      "The owner can permanently remove the subname from the registry, freeing the label for re-registration. Without this, not even the owner can delete it.",
+      "The subname owner can permanently remove their own name from the registry, freeing the label. Without this, the subname owner cannot delete it themselves. Accounts with registry-wide roles (you, until the registry is locked) can always delete any subname regardless of this setting.",
     dangerous: true,
   },
   {

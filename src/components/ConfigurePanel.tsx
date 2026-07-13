@@ -94,6 +94,11 @@ export function ConfigurePanel({ onDone }: { onDone: () => void }) {
             </button>
             {showRoles && subnameBitmap !== undefined && (
               <div className="mt-3 rounded-lg border border-neutral-200 p-4">
+                <p className="mb-2 text-xs opacity-60">
+                  {preset.id === "unruggable"
+                    ? "This preset defaults to a minimal, records-only set so locked subnames can't be restructured."
+                    : "The default matches REGISTRATION_ROLE_BITMAP, the standard set the ETH Registrar grants on .eth registrations."}
+                </p>
                 <RoleMatrixEditor
                   bitmap={subnameBitmap}
                   onChange={(next) => dispatch({ type: "set-subname-bitmap", bitmap: next })}
