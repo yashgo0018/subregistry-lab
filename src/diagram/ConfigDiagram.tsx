@@ -4,11 +4,36 @@
  * "protocol" mode (lapis graph paper, 8px minor / 80px major grid).
  */
 
-import { ReactFlow, Background, BackgroundVariant, Controls } from "@xyflow/react";
+import { useEffect } from "react";
+import {
+  ReactFlow,
+  Background,
+  BackgroundVariant,
+  Controls,
+  useNodesInitialized,
+  useReactFlow,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { nodeTypes } from "./nodes";
 import type { DiagramEdge, DiagramNode } from "./types";
+
+/**
+ * fitView at mount runs before custom nodes are measured, leaving the
+ * viewport misframed. Refit once nodes report their real dimensions, and
+ * again whenever the node set changes (e.g. subnames load in).
+ */
+function FitOnReady({ nodeCount }: { nodeCount: number }) {
+  const initialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    if (initialized) {
+      // next frame: dimensions are committed by then
+      requestAnimationFrame(() => void fitView({ padding: 0.1 }));
+    }
+  }, [initialized, nodeCount, fitView]);
+  return null;
+}
 
 // lapis/500 at 14% / 32% (SVG attrs can't use CSS vars reliably)
 const GRID_MINOR = "rgba(0, 130, 187, 0.14)";
@@ -70,6 +95,7 @@ export function ConfigDiagram({
           className="!border-[var(--diagram-stroke)] !bg-[var(--diagram-paper)] !fill-[var(--diagram-ink)]"
           showInteractive={false}
         />
+        <FitOnReady nodeCount={nodes.length} />
       </ReactFlow>
     </div>
   );
