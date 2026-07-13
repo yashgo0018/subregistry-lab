@@ -69,10 +69,13 @@ const GRID_MAJOR = "rgba(0, 130, 187, 0.32)";
 export function ConfigDiagram({
   nodes,
   edges,
+  affinities,
   onNodeClick,
 }: {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
+  /** Semantic relations without drawn edges; unioned into hover highlighting. */
+  affinities?: Record<string, string[]>;
   /** Optional: clicking a node (e.g. a resolver) opens a detail panel upstream. */
   onNodeClick?: (node: DiagramNode) => void;
 }) {
@@ -91,6 +94,7 @@ export function ConfigDiagram({
       if (e.source === hovered) neighbors.add(e.target);
       if (e.target === hovered) neighbors.add(e.source);
     }
+    for (const id of affinities?.[hovered] ?? []) neighbors.add(id);
     return {
       displayNodes: nodes.map((n) =>
         neighbors.has(n.id) ? n : { ...n, style: { ...n.style, opacity: 0.35 } },
@@ -101,7 +105,7 @@ export function ConfigDiagram({
           : { ...e, style: { ...e.style, opacity: 0.25 } },
       ),
     };
-  }, [nodes, edges, hovered]);
+  }, [nodes, edges, affinities, hovered]);
 
   return (
     <div className="diagram-canvas relative h-full w-full bg-[var(--diagram-paper)]">

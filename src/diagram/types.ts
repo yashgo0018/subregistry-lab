@@ -54,4 +54,10 @@ export type DiagramEdge = Edge;
 export type DiagramState = {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
+  /**
+   * Semantic relations that aren't drawn as edges (node id -> related node
+   * ids, symmetric). Hover highlighting unions these with edge adjacency,
+   * e.g. a shared resolver serves subnames it has no direct edge to.
+   */
+  affinities?: Record<string, string[]>;
 };

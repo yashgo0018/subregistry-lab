@@ -246,6 +246,34 @@ describe("toDiagram foreign resolvers", () => {
     }
   });
 
+  it("shared resolver affinities cover the parent and non-foreign subnames", () => {
+    const d = toDiagram({
+      ...BASE,
+      subnames: [
+        { label: "alice", resolver: BASE.resolver }, // default: explicit pointer
+        { label: "bare" }, // none: falls back to the shared resolver
+        { label: "bob", resolver: FOREIGN }, // foreign: its own resolver wins
+      ],
+    });
+    const related = d.affinities?.["resolver"] ?? [];
+    expect(related).toContain("parent");
+    expect(related).toContain("sub-alice");
+    expect(related).toContain("sub-bare");
+    expect(related).not.toContain("sub-bob");
+    // symmetric: hovering a served subname relates back to the resolver
+    expect(d.affinities?.["sub-bare"]).toContain("resolver");
+    expect(d.affinities?.["sub-bob"]).toBeUndefined();
+  });
+
+  it("no affinities without a shared resolver", () => {
+    const d = toDiagram({
+      parentName: "nick.eth",
+      userRegistry: "0x2222222222222222222222222222222222222222",
+      subnames: [{ label: "bare" }],
+    });
+    expect(d.affinities).toEqual({});
+  });
+
   it("no foreign machinery when everyone uses the shared resolver", () => {
     const d = toDiagram({
       ...BASE,

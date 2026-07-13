@@ -264,6 +264,7 @@ export function PlaygroundPanel() {
           <ConfigDiagram
             nodes={liveDiagram.nodes}
             edges={liveDiagram.edges}
+            affinities={liveDiagram.affinities}
             onNodeClick={(node) =>
               setInspected(node.type === "resolver" ? node : null)
             }
@@ -425,7 +426,9 @@ export function PlaygroundPanel() {
                 {classifyResolver(sub.resolver, resolver) === "foreign" && (
                   <Badge tone="amber">own resolver</Badge>
                 )}
-                {resolver && classifyResolver(sub.resolver, resolver) === "default" && (
+                {/* Works for resolver-less subnames too: resolution falls back
+                    to the shared resolver, where records are keyed by namehash */}
+                {resolver && classifyResolver(sub.resolver, resolver) !== "foreign" && (
                   <button
                     type="button"
                     onClick={() => setAddrFor(sub.label)}
@@ -517,9 +520,15 @@ function ResolverInspector({
       ? (node.id.slice("resolver-".length) as Address)
       : undefined;
 
+  // The shared resolver also serves subnames with no resolver of their own:
+  // resolution falls back to the nearest ancestor resolver (findResolver).
   const servedSubnames = addr
     ? subnames.filter(
-        (s) => s.registered && s.resolver.toLowerCase() === addr.toLowerCase(),
+        (s) =>
+          s.registered &&
+          (isShared
+            ? classifyResolver(s.resolver, addr) !== "foreign"
+            : s.resolver.toLowerCase() === addr.toLowerCase()),
       )
     : [];
   // The shared node only exists because the parent points at it.

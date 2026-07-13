@@ -97,7 +97,11 @@ export function ReviewPanel({ onComplete }: { onComplete: () => void }) {
 
       {targetDiagram && (
         <div className="h-72 overflow-hidden rounded-lg border border-neutral-200">
-          <ConfigDiagram nodes={targetDiagram.nodes} edges={targetDiagram.edges} />
+          <ConfigDiagram
+            nodes={targetDiagram.nodes}
+            edges={targetDiagram.edges}
+            affinities={targetDiagram.affinities}
+          />
         </div>
       )}
 

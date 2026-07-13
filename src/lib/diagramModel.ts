@@ -253,5 +253,23 @@ export function toDiagram(setup: SetupView): DiagramState {
     }
   }
 
-  return { nodes, edges };
+  // The shared resolver serves the parent name plus every subname that either
+  // points at it or has no resolver at all: UniversalResolver's findResolver
+  // keeps the nearest ancestor resolver when a label's own pointer is zero
+  // (LibRegistry.findResolver), so resolver-less subnames fall back to it.
+  // There are no drawn edges for these relations; record them as affinities
+  // so hover highlighting can still connect them.
+  const affinities: Record<string, string[]> = {};
+  const relate = (a: string, b: string) => {
+    (affinities[a] ??= []).push(b);
+    (affinities[b] ??= []).push(a);
+  };
+  if (sharedRes) {
+    relate("resolver", "parent");
+    subs.forEach((sub, i) => {
+      if (kinds[i] !== "foreign") relate("resolver", `sub-${sub.label}`);
+    });
+  }
+
+  return { nodes, edges, affinities };
 }
