@@ -193,6 +193,36 @@ export function buildSetupSteps(preset: Preset | PresetId): StepDef[] {
       },
     },
     {
+      id: "set-parent",
+      title: "Record the parent pointer",
+      explain:
+        "Stores which name this registry serves (metadata used by explorers and indexers; resolution doesn't depend on it, but it can't be set anymore after locking).",
+      build: (ctx) => ({
+        type: "write",
+        address: ctx.userRegistry!,
+        abi: registryAbi as unknown as Abi,
+        functionName: "setParent",
+        args: [deployments.ETHRegistry, ctx.parentLabel],
+      }),
+      verify: async (read, ctx) => {
+        const [parent, label] = (await read({
+          address: ctx.userRegistry!,
+          abi: registryAbi as unknown as Abi,
+          functionName: "getParent",
+          args: [],
+        })) as [Address, string];
+        const ok =
+          parent.toLowerCase() === deployments.ETHRegistry.toLowerCase() &&
+          label === ctx.parentLabel;
+        return {
+          ok,
+          detail: ok
+            ? `Registry knows it serves ${ctx.parentLabel}.eth`
+            : `getParent() reports (${parent}, "${label}")`,
+        };
+      },
+    },
+    {
       id: "deploy-registrar",
       title: "Deploy the subname registrar",
       explain: "Creates the contract that sells subnames for test USDC.",
@@ -403,9 +433,9 @@ export function buildLockParentLinkStep(params: {
   return [
     {
       id: "lock-parent-link",
-      title: "Lock the parent link",
+      title: "Lock your name's registry pointer",
       explain:
-        "Revokes your permission to change which registry your name points at. Irreversible.",
+        "Revokes your permission to change which registry your .eth name points at. Irreversible.",
       build: () => ({
         type: "write",
         address: deployments.ETHRegistry,
@@ -427,6 +457,41 @@ export function buildLockParentLinkStep(params: {
           detail: still
             ? "Link permission still present"
             : "Parent link is locked: this registry can never be swapped out",
+        };
+      },
+    },
+  ];
+}
+
+/** Re-link a previously deployed registry to the parent name. */
+export function buildRelinkStep(params: {
+  parentLabel: string;
+  registry: Address;
+}): StepDef[] {
+  return [
+    {
+      id: "relink",
+      title: `Re-link registry ${params.registry.slice(0, 6)}…`,
+      explain:
+        "Points your name back at this registry. Its subnames resolve again; the currently linked registry keeps its subnames and can be re-linked later too.",
+      build: () => ({
+        type: "write",
+        address: deployments.ETHRegistry,
+        abi: registryAbi as unknown as Abi,
+        functionName: "setSubregistry",
+        args: [labelhashId(params.parentLabel), params.registry],
+      }),
+      verify: async (read) => {
+        const linked = (await read({
+          address: deployments.ETHRegistry,
+          abi: registryAbi as unknown as Abi,
+          functionName: "getSubregistry",
+          args: [params.parentLabel],
+        })) as Address;
+        const ok = linked.toLowerCase() === params.registry.toLowerCase();
+        return {
+          ok,
+          detail: ok ? `${params.parentLabel}.eth now points at ${linked}` : `Link is ${linked}`,
         };
       },
     },

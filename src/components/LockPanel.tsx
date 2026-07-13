@@ -97,19 +97,21 @@ export function LockPanel() {
         </div>
         <WarningBox>
           Irreversible: after this, nobody (including you) can delete, renew, re-point, or
-          upgrade anything in this registry. New subnames can still be registered.
+          upgrade anything in this registry, and the registry's parent pointer (recorded
+          during setup) is frozen. New subnames can still be registered.
         </WarningBox>
       </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 p-4">
         <div className="flex items-center justify-between">
-          <h4 className="font-medium">2. Lock the parent link (optional)</h4>
+          <h4 className="font-medium">2. Lock your name's registry pointer (optional)</h4>
           {session.locked.linkLocked && <Badge tone="green">done</Badge>}
         </div>
         <WarningBox>
           Irreversible: you give up the permission to change which registry {parentName}{" "}
-          points at. You can never unlink or replace this subregistry again, "Replace with
-          a new setup" stops working for this name.
+          points at (its subregistry pointer in the .eth registry, not the registry's own
+          parent metadata). You can never unlink or replace this subregistry again,
+          "Replace with a new setup" and "Re-link" stop working for this name.
         </WarningBox>
       </div>
 
@@ -139,7 +141,7 @@ export function LockPanel() {
           onClick={lockLink}
           className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-40"
         >
-          Lock parent link
+          Lock registry pointer
         </button>
       </div>
 

@@ -33,9 +33,25 @@ describe("buildSetupSteps", () => {
       "deploy-registry",
       "deploy-resolver",
       "link",
+      "set-parent",
       "deploy-registrar",
       "grant-registrar",
     ]);
+  });
+
+  it("set-parent records the ETHRegistry as parent and verifies via getParent", async () => {
+    const step = buildSetupSteps("fully-controlled").find((s) => s.id === "set-parent")!;
+    const ctx = baseCtx({ userRegistry: REGISTRY });
+    const action = step.build(ctx);
+    if (action.type !== "write") throw new Error("expected write");
+    expect(action.address).toBe(REGISTRY);
+    expect(action.functionName).toBe("setParent");
+    expect(action.args).toEqual([deployments.ETHRegistry, "nick"]);
+
+    const good = await step.verify!(async () => [deployments.ETHRegistry, "nick"], ctx);
+    expect(good.ok).toBe(true);
+    const bad = await step.verify!(async () => [deployments.ETHRegistry, "other"], ctx);
+    expect(bad.ok).toBe(false);
   });
 
   it("registrar steps skip when no registrar params in ctx", () => {

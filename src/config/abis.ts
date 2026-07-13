@@ -183,6 +183,26 @@ export const registryAbi = [
     ],
     outputs: [],
   },
+  {
+    name: "setParent",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "parent", type: "address" },
+      { name: "label", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "getParent",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "parent", type: "address" },
+      { name: "label", type: "string" },
+    ],
+  },
   // --- events ---
   {
     name: "LabelRegistered",

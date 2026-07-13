@@ -8,6 +8,7 @@ import { useAccount } from "wagmi";
 import { useNameStatus } from "../hooks/useNameStatus";
 import { explorerName, explorerRegistry } from "../lib/links";
 import { useLab } from "../state/LabContext";
+import { RegistryHistory } from "./RegistryHistory";
 import { AddressLink, Badge, ExternalLink, NameChip, WarningBox, formatExpiry } from "./ui";
 
 export function SetupInspector({
@@ -86,7 +87,7 @@ export function SetupInspector({
           <p className="text-sm">
             This name already has a subregistry.
             {session.addresses.userRegistry?.toLowerCase() ===
-              status.subregistry?.toLowerCase() && " (Deployed by this app.)"}
+              status.subregistry?.toLowerCase() && " (This session deployed it.)"}
           </p>
           <div className="flex gap-2">
             <button
@@ -119,6 +120,8 @@ export function SetupInspector({
           </p>
         </div>
       )}
+
+      {!expired && status.canConfigure && <RegistryHistory />}
     </div>
   );
 }

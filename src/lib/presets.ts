@@ -119,14 +119,14 @@ export const PRESETS: Preset[] = [
         id: "revoke-registry-roles",
         title: "Give up dangerous registry roles",
         warning:
-          "Irreversible: after this, nobody (including you) can delete, renew, re-point, or upgrade anything in this registry. New subnames can still be registered.",
+          "Irreversible: after this, nobody (including you) can delete, renew, re-point, or upgrade anything in this registry, and its parent pointer (set during setup) is frozen. New subnames can still be registered.",
         optional: false,
       },
       {
         id: "lock-parent-link",
-        title: "Lock the parent link",
+        title: "Lock your name's registry pointer",
         warning:
-          "Irreversible: you give up the permission to change which registry your name points at. You can never unlink or replace this subregistry again.",
+          "Irreversible: you give up the permission to change which registry your .eth name points at (the subregistry pointer in the .eth registry). You can never unlink or replace this subregistry again.",
         optional: true,
       },
     ],
