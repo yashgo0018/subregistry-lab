@@ -10,7 +10,7 @@ import { useOwnedNames } from "../hooks/useOwnedNames";
 import { normalizeLabel } from "../lib/names";
 import { explorerName } from "../lib/links";
 import { useLab } from "../state/LabContext";
-import { AvatarDisc, Badge, ExternalLink, formatExpiry } from "./ui";
+import { AvatarSquare, Badge, ExternalLink, formatExpiry } from "./ui";
 
 export function NamePicker() {
   const { address } = useAccount();
@@ -64,7 +64,7 @@ export function NamePicker() {
                   }`}
                 >
                   <span className="flex items-center gap-2 font-medium">
-                    <AvatarDisc size={20} />
+                    <AvatarSquare size={20} />
                     {n.name}
                   </span>
                   <span className="flex items-center gap-2 text-sm">
@@ -120,7 +120,7 @@ export function NamePicker() {
       {session && (
         <p className="flex items-center gap-2 text-sm">
           <span>Working on</span>
-          <AvatarDisc size={16} />
+          <AvatarSquare size={16} />
           <strong>{session.parentLabel}.eth</strong>
           <ExternalLink href={explorerName(`${session.parentLabel}.eth`)}>
             view in ENS Explorer

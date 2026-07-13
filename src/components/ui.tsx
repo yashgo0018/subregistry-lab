@@ -57,12 +57,12 @@ export function AddressLink({ address }: { address: string }) {
   );
 }
 
-/** ENS Explorer-style avatar placeholder disc (pink->lavender gradient). */
-export function AvatarDisc({ size = 16 }: { size?: number }) {
+/** ENS Explorer-style avatar placeholder: slightly rounded square, pink->lavender gradient. */
+export function AvatarSquare({ size = 16 }: { size?: number }) {
   return (
     <span
       aria-hidden
-      className="inline-block shrink-0 rounded-full align-middle"
+      className="inline-block shrink-0 rounded-sm align-middle"
       style={{
         width: size,
         height: size,
@@ -72,11 +72,11 @@ export function AvatarDisc({ size = 16 }: { size?: number }) {
   );
 }
 
-/** ENS name as a blue entity chip with avatar disc (optionally linked). */
+/** ENS name as a blue entity chip with avatar placeholder (optionally linked). */
 export function NameChip({ name, href }: { name: string; href?: string }) {
   return (
     <EntityChip href={href} variant="blue">
-      <AvatarDisc size={14} />
+      <AvatarSquare size={14} />
       <span className="ml-1.5">{name}</span>
     </EntityChip>
   );
