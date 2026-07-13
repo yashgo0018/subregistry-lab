@@ -22,7 +22,8 @@ function ResolverNode({ data, selected }: NodeProps<ResolverNodeType>) {
       style={{ borderRadius: "var(--diagram-node-radius)" }}
     >
       <CornerMarkers variant="brown" />
-      <Handle type="target" position={Position.Top} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink-brown)]" />
+      <Handle id="top" type="target" position={Position.Top} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink-brown)]" />
+      <Handle id="left" type="target" position={Position.Left} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink-brown)]" />
       <div className="font-bold text-[var(--diagram-font-main)] leading-tight underline">{data.label}</div>
       {data.owner != null && data.owner !== "" && (
         <div className="mt-0.5 text-[var(--diagram-font-sub)] font-normal opacity-90">owner: {data.owner}</div>

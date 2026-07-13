@@ -75,6 +75,7 @@ export function toDiagram(setup: SetupView): DiagramState {
       id: "e-parent-registry",
       source: "parent",
       target: "user-registry",
+      targetHandle: "left",
       label: "subregistry",
     });
   }
@@ -96,6 +97,7 @@ export function toDiagram(setup: SetupView): DiagramState {
       id: "e-registrar-registry",
       source: "registrar",
       target: "user-registry",
+      targetHandle: "top",
       label: roleBadges || undefined,
     });
   }
@@ -116,7 +118,9 @@ export function toDiagram(setup: SetupView): DiagramState {
       edges.push({
         id: "e-registry-resolver",
         source: "user-registry",
+        sourceHandle: "right",
         target: "resolver",
+        targetHandle: "left",
         label: "records",
       });
     }
@@ -127,7 +131,9 @@ export function toDiagram(setup: SetupView): DiagramState {
     nodes.push({
       id,
       type: "action",
-      position: { x: COL.mid + 30, y: ROW.subStart + SUB_STEP * i },
+      // Right of the registry's bottom handle: edges route down-then-right
+      // into the left handle without S-bends.
+      position: { x: COL.mid + 180, y: ROW.subStart + SUB_STEP * i },
       data: {
         label: `${sub.label}.${setup.parentName}${sub.neverExpires ? " ∞" : ""}`,
         variant: "blue",
@@ -136,6 +142,7 @@ export function toDiagram(setup: SetupView): DiagramState {
     edges.push({
       id: `e-registry-${id}`,
       source: "user-registry",
+      sourceHandle: "bottom",
       target: id,
     });
   });

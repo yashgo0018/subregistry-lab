@@ -20,12 +20,15 @@ function RegistryNode({ data, selected }: NodeProps<RegistryNodeType>) {
         ${selected ? "ring-2 ring-[var(--diagram-ink)] ring-offset-2 ring-offset-[var(--diagram-paper)]" : ""}
       `}
     >
-      <Handle type="target" position={Position.Left} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
+      {/* Named handles on all four sides so edges can route without detours. */}
+      <Handle id="left" type="target" position={Position.Left} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
+      <Handle id="top" type="target" position={Position.Top} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
       <div className="font-bold text-[var(--diagram-font-main)] leading-tight">{data.label}</div>
       {data.subtitle != null && data.subtitle !== "" && (
         <div className="text-[var(--diagram-font-sub)] font-normal opacity-85 mt-0.5">{data.subtitle}</div>
       )}
-      <Handle type="source" position={Position.Right} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
+      <Handle id="right" type="source" position={Position.Right} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="!w-2 !h-2 !border-2 !bg-[var(--diagram-paper)] !border-[var(--diagram-ink)]" />
     </div>
   );
 }
