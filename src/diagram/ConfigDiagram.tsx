@@ -23,6 +23,9 @@ import type { DiagramEdge, DiagramNode } from "./types";
 /** Margin between the pane edge and the content, in screen pixels. */
 const FIT_MARGIN = 24;
 
+/** Back off from the exact fit (~two clicks of the minus control). */
+const ZOOM_FACTOR = 0.7;
+
 /**
  * Anchor the diagram to the TOP-LEFT corner (document-style) instead of
  * fitView's centering, which parks small content mid-pane with a large gap
@@ -46,7 +49,7 @@ function FitOnReady({ nodeCount }: { nodeCount: number }) {
           (paneWidth - 2 * FIT_MARGIN) / bounds.width,
           (paneHeight - 2 * FIT_MARGIN) / bounds.height,
           1.5,
-        ),
+        ) * ZOOM_FACTOR,
         0.15,
       );
       void setViewport({

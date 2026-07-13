@@ -59,6 +59,8 @@ export function toDiagram(setup: SetupView): DiagramState {
     id: "e-eth-parent",
     source: "eth-registry",
     target: "parent",
+    // straight vertical drop; a left-side entry would swing past the pane edge
+    targetHandle: "top",
   });
 
   if (setup.userRegistry) {
@@ -144,6 +146,7 @@ export function toDiagram(setup: SetupView): DiagramState {
       source: "user-registry",
       sourceHandle: "bottom",
       target: id,
+      targetHandle: "left",
     });
   });
 

@@ -22,7 +22,8 @@ function ActionNode({ data, selected }: NodeProps<ActionNodeType>) {
         ${selected ? "ring-2 ring-[var(--diagram-stroke)] ring-offset-2 ring-offset-[var(--diagram-paper)]" : ""}
       `}
     >
-      <Handle type="target" position={Position.Left} className={handleClass} />
+      <Handle id="left" type="target" position={Position.Left} className={handleClass} />
+      <Handle id="top" type="target" position={Position.Top} className={handleClass} />
       <span className="diagram-marist text-[var(--diagram-font-main)]">{data.label}</span>
       <Handle type="source" position={Position.Right} className={handleClass} />
     </div>
