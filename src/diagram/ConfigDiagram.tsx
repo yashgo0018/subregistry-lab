@@ -10,28 +10,52 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  getNodesBounds,
   useNodesInitialized,
   useReactFlow,
+  useStore,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 import { nodeTypes } from "./nodes";
 import type { DiagramEdge, DiagramNode } from "./types";
 
+/** Margin between the pane edge and the content, in screen pixels. */
+const FIT_MARGIN = 24;
+
 /**
- * fitView at mount runs before custom nodes are measured, leaving the
- * viewport misframed. Refit once nodes report their real dimensions, and
- * again whenever the node set changes (e.g. subnames load in).
+ * Anchor the diagram to the TOP-LEFT corner (document-style) instead of
+ * fitView's centering, which parks small content mid-pane with a large gap
+ * above. Runs once nodes report measured dimensions and again whenever the
+ * node set changes (e.g. subnames load in).
  */
 function FitOnReady({ nodeCount }: { nodeCount: number }) {
   const initialized = useNodesInitialized();
-  const { fitView } = useReactFlow();
+  const { getNodes, setViewport } = useReactFlow();
+  const paneWidth = useStore((s) => s.width);
+  const paneHeight = useStore((s) => s.height);
+
   useEffect(() => {
-    if (initialized) {
-      // next frame: dimensions are committed by then
-      requestAnimationFrame(() => void fitView({ padding: 0.1 }));
-    }
-  }, [initialized, nodeCount, fitView]);
+    if (!initialized || paneWidth === 0 || paneHeight === 0) return;
+    // next frame: dimensions are committed by then
+    requestAnimationFrame(() => {
+      const bounds = getNodesBounds(getNodes());
+      if (bounds.width === 0 || bounds.height === 0) return;
+      const zoom = Math.max(
+        Math.min(
+          (paneWidth - 2 * FIT_MARGIN) / bounds.width,
+          (paneHeight - 2 * FIT_MARGIN) / bounds.height,
+          1.5,
+        ),
+        0.15,
+      );
+      void setViewport({
+        x: FIT_MARGIN - bounds.x * zoom,
+        y: FIT_MARGIN - bounds.y * zoom,
+        zoom,
+      });
+    });
+  }, [initialized, nodeCount, paneWidth, paneHeight, getNodes, setViewport]);
   return null;
 }
 
@@ -52,8 +76,7 @@ export function ConfigDiagram({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.1 }}
+        defaultViewport={{ x: FIT_MARGIN, y: FIT_MARGIN, zoom: 1 }}
         minZoom={0.15}
         className="diagram-flow"
         nodesDraggable={false}
