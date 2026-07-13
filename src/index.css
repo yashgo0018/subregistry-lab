@@ -56,6 +56,11 @@ body {
   color: #191919;
 }
 
+/* ENS Explorer avatar placeholder (shown when a name has no avatar record) */
+:root {
+  --avatar-placeholder-gradient: linear-gradient(135deg, #ef7eb8 0%, #c6bef2 50%, #d6d4f8 100%);
+}
+
 #root {
   width: 100%;
   min-height: 100%;
