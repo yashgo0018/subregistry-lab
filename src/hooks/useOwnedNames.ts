@@ -48,7 +48,7 @@ export type OwnedNamesResult = {
   refresh: () => void;
 };
 
-const CACHE_PREFIX = "subregistry-lab:scan:v1:";
+const CACHE_PREFIX = "subregistry-lab:scan:v2:";
 
 function loadCache(wallet: string): ScanCache {
   try {
@@ -192,8 +192,7 @@ export function useOwnedNames(wallet?: Address): OwnedNamesResult {
         }
 
         // Confirm current ownership + expiry on-chain for each candidate.
-        // (getState carries status/expiry/latestOwner in one call; the
-        // deployed registries have no getOwner view.)
+        // getState carries status/expiry/latestOwner in one call.
         const candidates = cacheCandidates(cache);
         const now = BigInt(Math.floor(Date.now() / 1000));
         const confirmed: OwnedName[] = [];

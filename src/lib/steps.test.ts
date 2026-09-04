@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Address } from "viem";
+import { decodeFunctionData, type Address } from "viem";
 import { getPreset, DANGEROUS_ROOT_BITMAP, MAX_EXPIRY } from "./presets";
 import {
   buildDirectRegisterStep,
@@ -13,6 +13,7 @@ import {
 import { ALL_ROLES, ROLE_SET_SUBREGISTRY, adminOf } from "./roles";
 import { labelhashId } from "./names";
 import { deployments } from "../config/deployments";
+import { resolverInitAbi, userRegistryInitAbi } from "../config/abis";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
 const REGISTRY = "0x2222222222222222222222222222222222222222" as Address;
@@ -101,6 +102,17 @@ describe("buildSetupSteps", () => {
     expect(steps.find((s) => s.id === "deploy-resolver")!.skipIf!(baseCtx({ deployResolver: false }))).toBe(true);
   });
 
+  it("deploy-resolver initializes with the 3-arg (admin, bitmap, setters) signature", () => {
+    const step = buildSetupSteps("fully-controlled").find((s) => s.id === "deploy-resolver")!;
+    const action = step.build(baseCtx());
+    if (action.type !== "write") throw new Error("expected write");
+    const init = decodeFunctionData({
+      abi: resolverInitAbi,
+      data: action.args[2] as `0x${string}`,
+    });
+    expect(init.args).toEqual([ACCOUNT, ALL_ROLES, []]);
+  });
+
   it("deploy-registry targets the factory with fresh salts per build", () => {
     const step = buildSetupSteps("fully-controlled")[0];
     const a = step.build(baseCtx());
@@ -111,6 +123,12 @@ describe("buildSetupSteps", () => {
     // args: [impl, salt, initData] - salt differs between attempts
     expect(a.args[0]).toBe(deployments.UserRegistryImpl);
     expect(a.args[1]).not.toBe(b.args[1]);
+    const init = decodeFunctionData({
+      abi: userRegistryInitAbi,
+      data: a.args[2] as `0x${string}`,
+    });
+    expect(init.functionName).toBe("initialize");
+    expect(init.args).toEqual([ACCOUNT, getPreset("fully-controlled").ownerInitBitmap]);
   });
 
   it("link step threads the deployed registry through ctx", () => {
@@ -238,6 +256,12 @@ describe("buildSwitchResolverSteps", () => {
     expect(a.functionName).toBe("deployProxy");
     expect(a.args[0]).toBe(deployments.PermissionedResolverImpl);
     expect(a.args[1]).not.toBe(b.args[1]);
+    const init = decodeFunctionData({
+      abi: resolverInitAbi,
+      data: a.args[2] as `0x${string}`,
+    });
+    expect(init.functionName).toBe("initialize");
+    expect(init.args).toEqual([ACCOUNT, ALL_ROLES, []]);
   });
 
   it("deploy verify requires the captured address and the owner's root roles", async () => {

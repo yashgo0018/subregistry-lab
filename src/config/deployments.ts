@@ -1,27 +1,35 @@
 /**
  * ENSv2 Sepolia deployment addresses.
  *
- * Source of truth: the `sepolia-official-v1-20260525-r2` deployment set in
- * ensdomains/contracts-v2 (the same set shown on docs.ens.domains and tracked
- * by ensjs v2). Edit here when deployments move.
- * ABI artifacts: https://github.com/ensdomains/contracts-v2/tree/main/contracts/deployments/sepolia-official-v1-20260525-r2
+ * Source of truth: the Sepolia (ENSv2 Beta) set on docs.ens.domains, which
+ * tracks contracts-v2 `contracts/deployments/sepolia` (2026-07-30, commit
+ * 97a57293f3b4279d94b571e678edb53ce62638f4). Edit here when deployments move.
+ * ABI artifacts: https://github.com/ensdomains/contracts-v2/tree/97a57293f3b4279d94b571e678edb53ce62638f4/contracts/deployments/sepolia
  */
 
 export const deployments = {
-  ETHRegistry: "0xDEDB92913A25abE1f7BCDD85D8A344a43B398B67",
-  ETHRegistrar: "0x8c2E866B439358c41AE05De9cbE8A00BFEFafFcA",
-  StandardRentPriceOracle: "0xe19D37839F42F7d2694D8C5712f412C66A218161",
-  VerifiableFactory: "0xD2a632D8a8b67c2c4398c255CbD7aF8dd7236198",
-  UserRegistryImpl: "0x0F99e7Ea74903AfCB7224d0354fD7428A6f92917",
-  PermissionedResolverImpl: "0xdcE5205A553573FFd47629327DDdf36186022FfA",
-  MockUSDC: "0xBA11ebdB3f9a2c5946D8629517f06364E53A2E10",
-  MockDAI: "0x2922bCD677Af690fCD1eCC699519e4bfabc73ff8",
-  /** Universal Resolver for resolve checks (from the same deployment era). */
-  UniversalResolverV2: "0x2f8a180604c42457cb56c7c4f708748ff1f91df1",
+  ETHRegistry: "0xBDC85dD5b15D7ecb354cd7cb6f2c50b4f2c4F0E2",
+  ETHRegistrar: "0xa88553F454b77203B0D036A05c894d555EAAa2Cc",
+  StandardRentPriceOracle: "0x8914b66260EB8C4fff795650c3AE8Cd335958987",
+  VerifiableFactory: "0x10dC6333CDFe1FCEf624c6e0a8221b91804Cd7ef",
+  UserRegistryImpl: "0x624a25d67B59D587752EbEc8DdeD8827dAe52050",
+  PermissionedResolverImpl: "0x9EAe5C2730a7dD16BDD1DeE6421a1B91e3B0365e",
+  MockUSDC: "0x768F42455A2D082E23ceeF7d51e5787C82d67a39",
+  MockDAI: "0x5472C5725A00B7bA11F0794A79D08ade6F4683bD",
+  /** UniversalResolverV2 implementation (docs name). */
+  UniversalResolverV2: "0x4A1817d13E9cF196f471725176355C1234b63C70",
+  /**
+   * Public resolve entrypoint used by the ENS App and viem: the
+   * UpgradableUniversalResolverProxy, which delegates to UniversalResolverV2.
+   */
+  UniversalResolver: "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe",
 } as const;
 
+/** Block in which VerifiableFactory was deployed; factory log scans start here. */
+export const FACTORY_DEPLOY_BLOCK = 11383823n;
+
 /** Block in which ETHRegistry was deployed; owned-name log scans start here. */
-export const ETH_REGISTRY_DEPLOY_BLOCK = 10921984n;
+export const ETH_REGISTRY_DEPLOY_BLOCK = 11383897n;
 
 /**
  * RPC used for log scans: Tenderly's public gateway accepts full-range

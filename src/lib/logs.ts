@@ -6,7 +6,7 @@
  * LabelRegistered carries the label string but `owner` is NOT indexed.
  * So: collect candidate tokenIds from transfers TO the wallet, build a
  * canonicalId -> label index from LabelRegistered, join, then let the hook
- * confirm current ownership on-chain via getOwner.
+ * confirm current ownership on-chain via getState.latestOwner.
  */
 
 import { canonicalId } from "./names";

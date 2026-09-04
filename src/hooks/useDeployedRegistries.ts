@@ -15,7 +15,7 @@ import {
 import { sepolia } from "viem/chains";
 import { verifiableFactoryAbi } from "../config/abis";
 import {
-  ETH_REGISTRY_DEPLOY_BLOCK,
+  FACTORY_DEPLOY_BLOCK,
   LOG_SCAN_RPC,
   deployments,
 } from "../config/deployments";
@@ -55,7 +55,7 @@ export function useDeployedProxies(wallet?: Address, implementation?: Address) {
           address: deployments.VerifiableFactory,
           event: proxyDeployedEvent,
           args: { sender: wallet },
-          fromBlock: ETH_REGISTRY_DEPLOY_BLOCK,
+          fromBlock: FACTORY_DEPLOY_BLOCK,
           toBlock: "latest",
         });
         const found = logs

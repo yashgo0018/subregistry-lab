@@ -161,7 +161,7 @@ export function buildSetupSteps(preset: Preset | PresetId): StepDef[] {
           encodeFunctionData({
             abi: resolverInitAbi,
             functionName: "initialize",
-            args: [ctx.account, ALL_ROLES],
+            args: [ctx.account, ALL_ROLES, []],
           }),
         ],
       }),
@@ -559,7 +559,7 @@ export function buildSwitchResolverSteps(params: {
           encodeFunctionData({
             abi: resolverInitAbi,
             functionName: "initialize",
-            args: [params.owner, ALL_ROLES],
+            args: [params.owner, ALL_ROLES, []],
           }),
         ],
       }),

@@ -1,7 +1,7 @@
 /**
  * ENSv2 EAC role bitmaps for PermissionedRegistry / UserRegistry.
  * Values verified against contracts-v2 src/registry/libraries/RegistryRolesLib.sol
- * and src/access-control/libraries/EACBaseRolesLib.sol (main @ 48b3e2d).
+ * and src/access-control/libraries/EACBaseRolesLib.sol (@97a5729, Sepolia 2026-07-30).
  *
  * Layout: each role occupies one hex nybble in the lower 128 bits; the
  * corresponding admin role (who may grant/revoke it) is the same bit

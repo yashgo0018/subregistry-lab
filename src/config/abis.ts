@@ -2,7 +2,7 @@
  * Minimal ABIs for the contracts the lab touches.
  * Adapted from ensv2-example-tests/src/abis.ts (tested against the deployed
  * Sepolia set) and extended with register/renew, root-role functions, and
- * events, verified against contracts-v2 main (@48b3e2d) interfaces.
+ * events, verified against contracts-v2 @97a5729 (Sepolia 2026-07-30).
  */
 
 /** PermissionedRegistry / UserRegistry: registry surface + EAC. */
@@ -41,8 +41,8 @@ export const registryAbi = [
       },
     ],
   },
-  // NOTE: the deployed sepolia-official-v1-20260525-r2 registries have NO
-  // getOwner(anyId); use getState(anyId).latestOwner (or findOwner(label)).
+  // getState is the one-call snapshot (status/expiry/latestOwner/token/resource).
+  // The July 2026 registries also expose getOwner(anyId); we still prefer getState.
   {
     name: "getExpiry",
     type: "function",
@@ -232,7 +232,7 @@ export const registryAbi = [
     type: "event",
     inputs: [
       { name: "tokenId", type: "uint256", indexed: true },
-      { name: "subregistry", type: "address", indexed: false },
+      { name: "subregistry", type: "address", indexed: true },
       { name: "sender", type: "address", indexed: true },
     ],
   },
@@ -273,9 +273,8 @@ export const userRegistryInitAbi = [
 
 /**
  * PermissionedResolver proxy initializer.
- * NOTE: the DEPLOYED Sepolia implementation (0xdcE5...2FfA) takes 2 args;
- * contracts-v2 main has since moved to a 3-arg version with init setters.
- * Keep in sync with the implementation address in deployments.ts.
+ * The July 2026 implementation takes (admin, roleBitmap, setters): pass an
+ * empty `setters` array unless you want to multicall record writes at init.
  */
 export const resolverInitAbi = [
   {
@@ -285,6 +284,7 @@ export const resolverInitAbi = [
     inputs: [
       { name: "admin", type: "address" },
       { name: "roleBitmap", type: "uint256" },
+      { name: "setters", type: "bytes[]" },
     ],
     outputs: [],
   },

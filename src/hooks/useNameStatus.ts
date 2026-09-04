@@ -33,8 +33,7 @@ export function useNameStatus(parentLabel?: string, account?: Address): NameStat
     contracts: enabled
       ? [
           {
-            // status/expiry/latestOwner in one call (deployed registries
-            // have no getOwner view)
+            // status/expiry/latestOwner in one call
             address: deployments.ETHRegistry,
             abi: registryAbi as Abi,
             functionName: "getState",

@@ -189,7 +189,7 @@ export function labReducer(state: LabState, action: LabAction): LabState {
   }
 }
 
-const STORAGE_KEY = "subregistry-lab:sessions:v1";
+const STORAGE_KEY = "subregistry-lab:sessions:v2";
 
 export function loadState(): LabState {
   try {

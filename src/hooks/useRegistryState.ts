@@ -14,7 +14,7 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { registryAbi } from "../config/abis";
-import { ETH_REGISTRY_DEPLOY_BLOCK, LOG_SCAN_RPC } from "../config/deployments";
+import { FACTORY_DEPLOY_BLOCK, LOG_SCAN_RPC } from "../config/deployments";
 import { classifyError } from "../lib/errors";
 import { labelhashId } from "../lib/names";
 import { MAX_EXPIRY } from "../lib/presets";
@@ -57,7 +57,7 @@ export function useRegistryState(registry?: Address, fromBlock?: bigint) {
         const params = {
           address: registry,
           event: labelRegisteredEvent,
-          fromBlock: fromBlock ?? ETH_REGISTRY_DEPLOY_BLOCK,
+          fromBlock: fromBlock ?? FACTORY_DEPLOY_BLOCK,
           toBlock: "latest",
         } as const;
         let logs;

@@ -43,7 +43,7 @@ netlify deploy --prod    # or connect the repo in the Netlify UI
 
 ## Configuration
 
-- **Contract addresses** live in `src/config/deployments.ts`, the ENSv2 Sepolia set from the official `sepolia-official-v1-20260525-r2` deployment (same as docs.ens.domains). Edit there when deployments move.
+- **Contract addresses** live in `src/config/deployments.ts`, the ENSv2 Sepolia set from [docs.ens.domains Sepolia (ENSv2 Beta)](https://docs.ens.domains/learn/deployments/#sepolia-ensv2-beta) (`contracts-v2` `deployments/sepolia`, 2026-07-30). Edit there when deployments move.
 - The `SimpleSubnameRegistrar` bytecode in `src/config/artifacts/` is the compiled contract from the tutorial (source in `ensv2-example-tests/contracts/`).
 
 ## Architecture notes

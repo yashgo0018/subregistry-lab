@@ -15,7 +15,7 @@ import {
 } from "./roles";
 
 describe("role constants", () => {
-  // Golden values from RegistryRolesLib.sol (contracts-v2 main @48b3e2d)
+  // Golden values from RegistryRolesLib.sol (contracts-v2 @97a5729)
   it("matches the contract constants", () => {
     expect(ROLE_REGISTRAR).toBe(1n);
     expect(ROLE_RENEW).toBe(1n << 16n);

@@ -213,7 +213,7 @@ export function PlaygroundPanel() {
     try {
       const resolved = await client.getEnsAddress({
         name,
-        universalResolverAddress: deployments.UniversalResolverV2,
+        universalResolverAddress: deployments.UniversalResolver,
       });
       setResolveResults((prev) => ({
         ...prev,
